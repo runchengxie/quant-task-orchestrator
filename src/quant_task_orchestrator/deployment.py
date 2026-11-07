@@ -88,7 +88,7 @@ After=network.target
 [Service]
 Type=simple
 ExecStart="{release}/venv/bin/quant-task" --database "{data}/quant/quant-task-orchestrator/state.sqlite" serve-api --host 127.0.0.1 --port {port} --token-file "{config}/projects/quant-task-orchestrator/gui.token"
-WorkingDirectory="{release}"
+WorkingDirectory={release}
 Restart=on-failure
 UMask=0077
 NoNewPrivileges=true
