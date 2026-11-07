@@ -1,6 +1,8 @@
 import hashlib
 import json
+import shutil
 import sqlite3
+import subprocess
 import tempfile
 import threading
 import unittest
@@ -46,6 +48,25 @@ class DeploymentTests(unittest.TestCase):
             self.assertEqual(result["integrity"], "ok")
             with self.assertRaises(FileExistsError):
                 backup_database(db, root / "backup.sqlite")
+
+    @unittest.skipUnless(shutil.which("systemd-analyze"), "systemd parser unavailable")
+    def test_generated_unit_passes_real_systemd_parser_with_spaces(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            release = root / "release space"
+            executable = release / "venv/bin/quant-task"
+            executable.parent.mkdir(parents=True)
+            executable.write_text("#!/bin/sh\nexit 0\n")
+            executable.chmod(0o700)
+            unit = root / "workbench.service"
+            unit.write_text(service_unit(release, root / "data space", root / "config space"))
+            result = subprocess.run(
+                ["systemd-analyze", "verify", "--man=no", str(unit)],
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            self.assertEqual(result.returncode, 0, result.stderr)
 
     def test_service_rejects_relative_paths_and_injection(self):
         with self.assertRaises(ValueError):
