@@ -1,0 +1,12 @@
+{
+  "schema": "quant.orchestrator_config.v1",
+  "adapters": {
+    "runtime": {
+      "kind": "runtime",
+      "command": ["/immutable/runtime/backtest-job", "--error-format", "json", "--database", "/data/synthetic/jobs.sqlite", "--artifact-root", "/data/synthetic/artifacts", "--result-root", "/data/synthetic/results"],
+      "request": "/data/synthetic/request.json",
+      "queue": true
+    }
+  },
+  "catalog": []
+}

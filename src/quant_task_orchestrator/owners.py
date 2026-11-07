@@ -1,0 +1,166 @@
+"""Fixed owner CLI adapters. These supervise trusted CLIs, not untrusted code."""
+
+from __future__ import annotations
+
+import json
+import os
+import signal
+import subprocess
+import tempfile
+
+
+class OwnerError(RuntimeError):
+    def __init__(self, code):
+        self.code = code
+        super().__init__(code)
+
+
+class Owner:
+    def __init__(self, binding):
+        self.binding = binding
+
+    def call(self, arguments, *, accepted=(0,)):
+        # Bound file-backed capture prevents unbounded Python heap consumption.
+        # OS disk quotas remain the operator's responsibility for a misbehaving CLI.
+        environment = {
+            k: os.environ[k]
+            for k in ("PATH", "LANG", "LC_ALL", "LD_LIBRARY_PATH", "TMPDIR")
+            if k in os.environ
+        }
+        environment["PYTHONNOUSERSITE"] = "1"
+        with tempfile.TemporaryFile() as out, tempfile.TemporaryFile() as err:
+            process = subprocess.Popen(
+                [*self.binding["command"], *arguments],
+                stdout=out,
+                stderr=err,
+                env=environment,
+                start_new_session=True,
+            )
+            try:
+                process.wait(timeout=30)
+            except subprocess.TimeoutExpired:
+                os.killpg(process.pid, signal.SIGKILL)
+                process.wait()
+                raise OwnerError("OWNER_RESPONSE_UNKNOWN") from None
+            if out.tell() > 1_048_576 or err.tell() > 1_048_576:
+                raise OwnerError("OWNER_OUTPUT_TOO_LARGE")
+            out.seek(0)
+            err.seek(0)
+            raw = out.read() if process.returncode in accepted else err.read()
+        try:
+            value = json.loads(raw)
+        except (ValueError, UnicodeDecodeError):
+            raise OwnerError("OWNER_INVALID_JSON") from None
+        if not isinstance(value, dict):
+            raise OwnerError("OWNER_INVALID_OBJECT")
+        if process.returncode not in accepted:
+            # Never forward owner free text or private paths to the public view.
+            code = value.get("code")
+            raise OwnerError(
+                "JOB_NOT_FOUND" if code == "JOB_NOT_FOUND" else "OWNER_OPERATION_FAILED"
+            )
+        return value
+
+    def runtime_lookup(self):
+        try:
+            return self.call(["lookup", "--idempotency-key", self.binding["idempotency_key"]])
+        except OwnerError as exc:
+            if exc.code == "JOB_NOT_FOUND":
+                return None
+            raise
+
+    def research_args(self, operation, *extra):
+        return [
+            "--config",
+            self.binding["config"],
+            "--expected-config-sha256",
+            self.binding["pins"][self.binding["config"]],
+            operation,
+            *extra,
+        ]
+
+    def runtime_submit(self):
+        arguments = ["submit"]
+        if self.binding["queue"]:
+            arguments.append("--queue")
+        return self.call(
+            [
+                *arguments,
+                self.binding["request"],
+                "--expected-plan-sha256",
+                self.binding["owner_plan_sha256"],
+            ]
+        )
+
+    def confirm_existing(self, receipt):
+        # A proven existing key permits an idempotent replay to ask the owner to
+        # check its request fingerprint. Never replay when lookup finds no job.
+        confirmed = self.runtime_submit()
+        if confirmed.get("job_id") != receipt.get("job_id"):
+            raise OwnerError("OWNER_IDENTITY_MISMATCH")
+        return receipt
+
+    def start(self):
+        if self.binding["kind"] == "runtime":
+            existing = self.runtime_lookup()
+            return (
+                self.confirm_existing(existing) if existing is not None else self.runtime_submit()
+            )
+        return self.call(
+            self.research_args("advance", self.binding["proposal_id"]), accepted=(0, 1)
+        )
+
+    def inspect(self, owner_id):
+        if self.binding["kind"] == "runtime":
+            receipt = (
+                self.runtime_lookup() if owner_id is None else self.call(["inspect", owner_id])
+            )
+            if receipt is None:
+                raise OwnerError("SUBMISSION_UNCERTAIN_NO_RECEIPT")
+            if owner_id is not None and receipt.get("job_id") != owner_id:
+                raise OwnerError("OWNER_IDENTITY_MISMATCH")
+            return self.confirm_existing(receipt) if owner_id is None else receipt
+        # advance only reconciles an already bound proposal; no admission or
+        # compute reservation is repeated by the Research owner.
+        return self.call(
+            self.research_args("advance", self.binding["proposal_id"]), accepted=(0, 1)
+        )
+
+    def cancel(self, owner_id):
+        if self.binding["kind"] == "research":
+            receipt = self.inspect(owner_id)
+            if receipt.get("state") in {"SUPPORTED", "DISCARDED", "DIAGNOSTIC_COMPLETED"}:
+                return receipt
+            raise OwnerError("OWNER_CANCELLATION_REQUIRES_OPERATOR")
+        if owner_id is None:
+            owner_id = self.inspect(None)["job_id"]
+        return self.call(["cancel", owner_id])
+
+    def grade(self, receipt):
+        if self.binding["kind"] == "runtime":
+            owner_id, state = receipt.get("job_id"), receipt.get("status")
+            if not isinstance(owner_id, str) or not owner_id:
+                raise OwnerError("OWNER_IDENTITY_MISMATCH")
+            if state == "SUCCEEDED":
+                result = self.call(["result", owner_id])
+                if (
+                    result.get("job_id") != owner_id
+                    or result.get("request_sha256") != self.binding["owner_request_sha256"]
+                ):
+                    raise OwnerError("OWNER_IDENTITY_MISMATCH")
+                return "SUCCEEDED", owner_id, "RESULT_INTEGRITY_VERIFIED"
+            if state in {"FAILED", "CANCELLED"}:
+                return state, owner_id, "NOT_VERIFIED"
+            if state in {"SUBMITTED", "RUNNING", "QUEUED"}:
+                return "RUNNING", owner_id, "NOT_VERIFIED"
+            raise OwnerError("UNKNOWN_OWNER_STATE")
+        owner_id, state = receipt.get("proposal_id"), receipt.get("state")
+        if owner_id != self.binding["proposal_id"]:
+            raise OwnerError("OWNER_IDENTITY_MISMATCH")
+        if state in {"SUPPORTED", "DISCARDED", "DIAGNOSTIC_COMPLETED"}:
+            return "SUCCEEDED", owner_id, state
+        if state in {"BLOCKED", "REJECTED", "REQUIRES_HUMAN_REVIEW", "COMPLETED_UNVERIFIED"}:
+            return "BLOCKED", owner_id, state
+        if state in {"SUBMITTED", "SUBMIT_UNKNOWN", "ADMITTED"}:
+            return "RUNNING", owner_id, state
+        raise OwnerError("UNKNOWN_OWNER_STATE")

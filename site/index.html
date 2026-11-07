@@ -1,0 +1,305 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="A synthetic interactive demo of owner-aware quantitative research workflow coordination."
+    />
+    <title>Quant Task Orchestrator · Research Operations</title>
+    <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="styles.css" />
+    <script src="locales.js" defer></script>
+    <script src="demo-data.js" defer></script>
+    <script src="app.js" defer></script>
+  </head>
+  <body>
+    <a class="skip" href="#main" data-i18n="skip">Skip to workflows</a>
+    <aside class="sidebar">
+      <a class="brand" href="./"
+        ><span class="brand-icon">q<span>·</span></span
+        ><span>QUANT<span class="brand-sub">TASK ORCHESTRATOR</span></span></a
+      >
+      <div class="workspace">
+        <span class="workspace-icon">R</span>
+        <div data-i18n="workspace">Research workspace</div>
+        <span class="tiny-dot"></span>
+      </div>
+      <div class="nav-label" data-i18n="workspaceLabel">WORKSPACE</div>
+      <nav aria-label="Workspace">
+        <a class="nav-item active" href="#workflows"
+          ><span>▦</span><span data-i18n="workflows">Workflows</span
+          ><span class="nav-count">03</span></a
+        ><a class="nav-item" href="#owners"
+          ><span>◈</span><span data-i18n="owners">Domain owners</span></a
+        ><a class="nav-item" href="#skills"
+          ><span>⌘</span><span data-i18n="skills">Skill catalog</span></a
+        ><a class="nav-item" href="#activity"
+          ><span>◷</span><span data-i18n="activity">Event ledger</span></a
+        >
+      </nav>
+      <div class="sidebar-note">
+        <span class="status-dot"></span
+        ><span data-i18n="localFirst">Local-first coordination</span>
+        <p data-i18n="boundary">
+          One workflow. Independent owners. Evidence stays at its source.
+        </p>
+      </div>
+      <a
+        class="source-link"
+        href="https://github.com/runchengxie/quant-task-orchestrator"
+        target="_blank"
+        rel="noopener"
+        ><span data-i18n="source">View on GitHub</span><span>↗</span></a
+      >
+      <div class="profile">
+        <span class="avatar">Q</span>
+        <div>
+          <strong data-i18n="demoWorkspace">Demo workspace</strong
+          ><small data-i18n="syntheticOnly">Synthetic data only</small>
+        </div>
+        <span>◇</span>
+      </div>
+    </aside>
+    <main id="main">
+      <header class="topbar">
+        <div>
+          <span class="breadcrumb" data-i18n="researchOps"
+            >Research operations</span
+          ><span class="separator">/</span
+          ><span data-i18n="workflows">Workflows</span>
+        </div>
+        <div class="top-actions">
+          <span class="demo-pill"
+            ><span class="status-dot"></span
+            ><span data-i18n="interactiveDemo">INTERACTIVE DEMO</span></span
+          ><button id="language" class="language" aria-label="Switch language">
+            中文
+          </button>
+        </div>
+      </header>
+      <div class="content">
+        <section class="page-heading">
+          <div>
+            <div class="eyebrow" data-i18n="controlPlane">
+              THE RESEARCH CONTROL PLANE
+            </div>
+            <h1 data-i18n="heading">Every step. One clear view.</h1>
+            <p data-i18n="subtitle">
+              Follow research from question to evidence, without losing the
+              thread.
+            </p>
+          </div>
+          <button id="replay" class="primary">
+            <span>↻</span> <span data-i18n="replay">Replay demo</span>
+          </button>
+        </section>
+        <div class="notice">
+          <span class="notice-icon">i</span>
+          <p>
+            <strong data-i18n="demoNotice"
+              >A preview, using synthetic workflows.</strong
+            >
+            <span data-i18n="demoExplanation"
+              >Controls change this demo only. No production services, real
+              strategies or live orders are connected.</span
+            >
+          </p>
+        </div>
+        <section class="metrics" aria-label="Workflow overview">
+          <article>
+            <span data-i18n="totalWorkflows">WORKFLOWS</span>
+            <div>
+              03 <small data-i18n="acrossOwners">across domain owners</small>
+            </div>
+            <div class="metric-line">
+              <i class="teal"></i
+              ><span data-i18n="tracked">Every assignment traceable</span>
+            </div>
+          </article>
+          <article>
+            <span data-i18n="running">IN PROGRESS</span>
+            <div id="running-count">
+              01 <small data-i18n="activeExecution">active execution</small>
+            </div>
+            <div class="metric-line">
+              <i class="blue"></i
+              ><span data-i18n="ownerManaged">Workers managed by owners</span>
+            </div>
+          </article>
+          <article>
+            <span data-i18n="needsAttention">NEEDS ATTENTION</span>
+            <div id="attention-count">
+              02 <small data-i18n="explicitBlockers">explicit blockers</small>
+            </div>
+            <div class="metric-line">
+              <i class="amber"></i
+              ><span data-i18n="noSilent">No silent promotion</span>
+            </div>
+          </article>
+          <article>
+            <span data-i18n="evidenceLinks">EVIDENCE COVERAGE</span>
+            <div>
+              08<small>
+                / 10
+                <span data-i18n="linkedArtifacts">artifacts linked</span></small
+              >
+            </div>
+            <div class="mini-progress"><span></span></div>
+          </article>
+        </section>
+        <section id="workflows" class="workflow-section">
+          <div class="section-heading">
+            <div class="tabs">
+              <button class="tab active" data-filter="all">
+                <span data-i18n="allWorkflows">All workflows</span
+                ><b>3</b></button
+              ><button
+                class="tab"
+                data-filter="attention"
+                data-i18n="attention"
+              >
+                Needs attention
+              </button>
+            </div>
+            <label class="search"
+              ><span>⌕</span
+              ><input
+                id="search"
+                type="search"
+                data-placeholder="search"
+                placeholder="Find a workflow…"
+                aria-label="Find a workflow"
+            /></label>
+          </div>
+          <div id="workflow-list" class="workflow-list"></div>
+        </section>
+        <section class="detail-grid" aria-label="Selected workflow">
+          <article class="panel graph-panel">
+            <div class="panel-heading">
+              <div>
+                <div class="eyebrow" data-i18n="workflowMap">WORKFLOW MAP</div>
+                <h2 id="map-title"></h2>
+              </div>
+              <span class="subtle-tag" data-i18n="dependencyDag"
+                >Dependency DAG</span
+              >
+            </div>
+            <div class="graph-legend">
+              <span
+                ><i class="teal"></i
+                ><span data-i18n="complete">Complete</span></span
+              ><span
+                ><i class="blue"></i
+                ><span data-i18n="executing">Executing</span></span
+              ><span
+                ><i class="amber"></i
+                ><span data-i18n="blocked">Blocked</span></span
+              ><span
+                ><i class="gray"></i
+                ><span data-i18n="waiting">Waiting</span></span
+              >
+            </div>
+            <div id="graph" class="graph"></div>
+            <div class="graph-footer">
+              <span>⌁</span>
+              <p data-i18n="mapHint">
+                Select a step to inspect its owner, identity and evidence.
+              </p>
+              <span class="mono">DAG / v1</span>
+            </div>
+          </article>
+          <article
+            id="step-detail"
+            class="panel inspector"
+            aria-live="polite"
+          ></article>
+        </section>
+        <section class="bottom-grid">
+          <article id="activity" class="panel ledger">
+            <div class="panel-heading">
+              <h2 data-i18n="recentEvents">Event ledger</h2>
+              <span class="subtle-tag" data-i18n="durableHints"
+                >Durable hints · owner verified</span
+              >
+            </div>
+            <div id="events"></div>
+          </article>
+          <article id="owners" class="panel owner-panel">
+            <div class="panel-heading">
+              <h2 data-i18n="ownership">Clear ownership</h2>
+              <span>◈</span>
+            </div>
+            <div class="owner">
+              <span class="owner-icon">O</span>
+              <div>
+                <strong>task-orchestrator</strong
+                ><small data-i18n="orchestratorRole"
+                  >Dependencies · dispatch · recovery</small
+                >
+              </div>
+              <span class="owner-badge" data-i18n="coordination"
+                >Coordination</span
+              >
+            </div>
+            <div class="owner">
+              <span class="owner-icon blue-icon">R</span>
+              <div>
+                <strong>backtest-runtime</strong
+                ><small data-i18n="runtimeRole"
+                  >Compute · leases · verified results</small
+                >
+              </div>
+              <span class="owner-badge" data-i18n="execution">Execution</span>
+            </div>
+            <div class="owner">
+              <span class="owner-icon purple-icon">Q</span>
+              <div>
+                <strong>quant-research</strong
+                ><small data-i18n="researchRole"
+                  >Admission · PIT · review · promotion</small
+                >
+              </div>
+              <span class="owner-badge" data-i18n="governance">Governance</span>
+            </div>
+            <p class="owner-footnote" data-i18n="ownerTruth">
+              Owner state is authoritative. Successful execution alone never
+              validates research.
+            </p>
+          </article>
+        </section>
+        <section id="skills" class="panel skill-panel">
+          <div class="panel-heading">
+            <div>
+              <div class="eyebrow" data-i18n="versionLocked">
+                VERSION-LOCKED CAPABILITIES
+              </div>
+              <h2 data-i18n="skillTitle">
+                Same workflow. Same skill revision.
+              </h2>
+            </div>
+            <span class="subtle-tag" data-i18n="syntheticLocks"
+              >Illustrative locks</span
+            >
+          </div>
+          <div id="skill-list" class="skill-list"></div>
+        </section>
+        <footer>
+          <span
+            ><span class="footer-dot"></span>quant-task-orchestrator
+            <span class="mono">/ v0.1</span></span
+          ><span data-i18n="footer"
+            >Built for reproducible research. Designed around explicit
+            boundaries.</span
+          ><a
+            href="https://github.com/runchengxie/quant-task-orchestrator/blob/main/docs/architecture.md"
+            data-i18n="readArchitecture"
+            >Read the architecture ↗</a
+          >
+        </footer>
+      </div>
+    </main>
+    <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  </body>
+</html>
