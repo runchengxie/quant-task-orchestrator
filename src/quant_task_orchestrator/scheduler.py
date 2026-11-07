@@ -99,7 +99,9 @@ class Scheduler:
                     self.store.bind_owner_id(wid, sid, identity)
                     status, owner_id, evidence = owner.grade(receipt)
                     checks = owner.evidence(receipt)
-                    self.store.complete_step(wid, sid, status, owner_id, evidence, checks)
+                    self.store.complete_step(
+                        wid, sid, status, owner_id, evidence, checks, owner.execution(receipt)
+                    )
                 except (OwnerError, OSError, ValueError) as exc:
                     code = (
                         exc.code if isinstance(exc, OwnerError) else "OWNER_OPERATION_UNAVAILABLE"

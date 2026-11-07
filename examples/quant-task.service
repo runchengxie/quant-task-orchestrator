@@ -1,0 +1,19 @@
+# Proposal only. Replace all three absolute root placeholders and the merged release ID.
+# Generate the concrete version with deployment.service_unit; never use a task worktree.
+[Unit]
+Description=Quant orchestrator read-only local GUI
+After=network.target
+
+[Service]
+Type=simple
+ExecStart="/CODE_ROOT/production/quant-task-orchestrator/releases/MERGED-RELEASE/venv/bin/quant-task" --database "/DATA_ROOT/quant/quant-task-orchestrator/state.sqlite" serve-api --host 127.0.0.1 --port 8787 --token-file "/CONFIG_ROOT/projects/quant-task-orchestrator/gui.token"
+Restart=on-failure
+UMask=0077
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=read-only
+PrivateTmp=true
+ReadOnlyPaths=/DATA_ROOT /CONFIG_ROOT /CODE_ROOT/production/quant-task-orchestrator/releases/MERGED-RELEASE
+
+[Install]
+WantedBy=default.target

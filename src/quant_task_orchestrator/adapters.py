@@ -1,6 +1,16 @@
 """Explicit adapter registry. Discovery never expands execution authority."""
 
 ADAPTERS = {
+    "raw_observation": {
+        "owner": "quant-market-data-platform",
+        "contract": "quant.raw_observation_assessment.v1",
+        "effects": [],
+    },
+    "codex_task": {
+        "owner": "quant-research",
+        "contract": "research.codex-task-receipt/v1",
+        "effects": ["bounded_codex_start", "explicit_resume", "codex_turn_cancel"],
+    },
     "runtime": {
         "owner": "quant-backtest-runtime",
         "contract": "quant.backtest_plan.v1",

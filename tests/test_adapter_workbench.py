@@ -20,7 +20,15 @@ class AdapterWorkbenchTests(unittest.TestCase):
         self.assertFalse(catalog["permission_grant"])
         self.assertEqual(
             {row["kind"] for row in catalog["adapters"]},
-            {"runtime", "research", "data", "report", "native_session"},
+            {
+                "runtime",
+                "research",
+                "data",
+                "report",
+                "native_session",
+                "codex_task",
+                "raw_observation",
+            },
         )
         self.assertEqual(
             next(row for row in catalog["adapters"] if row["kind"] == "native_session")["effects"],

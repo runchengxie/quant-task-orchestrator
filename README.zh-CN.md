@@ -10,10 +10,12 @@
 
 - SQLite 持久化工作流、DAG 依赖、绑定计划摘要的批准和事件记录。
 - Runtime CLI 适配：绑定计划后提交、按原幂等键恢复、校验结果、取消任务。
-- Research CLI 适配：协调**已获批准的既有 Campaign 提案**。本版本不创建模型会话、不发起新提案、不生成研究结论。
-- 跨仓 Skill 目录：固定 Git commit 与内容摘要，旧任务保留原版本。
-- 共用证据与恢复视图的本地实时只读 GUI、TUI 与回环地址 JSON API。
-- 数据/报告 Owner 校验、历史原生会话检查与固定范围的发布事件触发。
+- Research CLI 适配：协调**已获批准的既有 Campaign 提案**。该适配器不发起新提案、不生成研究结论。
+- 通过 Research Owner 启动、精确恢复和取消有预算的 Codex CLI 任务，记录实际用量。
+- 跨仓 Skill 目录与文本安装：固定 Git commit 与内容摘要，旧任务保留原版本。
+- 共用证据与恢复视图的本地实时只读 GUI、TUI 与回环地址 JSON API，可启用私有 Bearer 认证。
+- 数据/报告 Owner 校验、原始观测文件内容校验与历史原生会话检查。
+- 持久事件收件箱、本地通知 outbox、发布包暂存和 SQLite 备份。
 - 显式证据门槛，以及工作流耗时、Owner 调用与操作者动作统计。
 - GitHub Pages 响应式中英文演示，全部使用虚构数据，按钮只模拟状态变化。
 
@@ -35,6 +37,7 @@ quant-task --database "$TASK_DATABASE" serve-api --port 8787
 - [架构与职责边界](docs/architecture.md)
 - [工作流、API 与 Skill 契约](docs/contracts.md)
 - [运行、取消与恢复](docs/operations.md)
+- [Codex 与运维增量](docs/codex-operations.zh-CN.md)
 - [验证记录与限制](docs/validation.md)
 
 ```sh

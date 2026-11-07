@@ -55,6 +55,13 @@
         data-i18n="setup"
         >Open local setup instructions</a
       >
+      <section id="login" class="live-panel" hidden>
+        <label for="token" data-i18n="tokenLabel">Private API token</label>
+        <input id="token" type="password" autocomplete="off" spellcheck="false" />
+        <button id="connect" type="button" data-i18n="connect">Connect</button>
+        <button id="disconnect" type="button" data-i18n="disconnect">Forget token</button>
+        <p data-i18n="tokenMemory">The token stays in this page's memory and is never stored in a URL or browser storage.</p>
+      </section>
       <section
         id="metrics"
         class="live-metrics"

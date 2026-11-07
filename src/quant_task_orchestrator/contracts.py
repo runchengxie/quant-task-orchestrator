@@ -152,13 +152,23 @@ def lock_skill(skill):
         identifier(permission)
     for field in ("input_contract", "output_contract"):
         identifier(skill[field])
-    try:
-        content = subprocess.run(
-            ["git", "-C", skill["source"], "show", f"{skill['revision']}:{path}"],
+
+    def git(*arguments):
+        return subprocess.run(
+            ["git", "--no-replace-objects", "-C", skill["source"], *arguments],
             capture_output=True,
             timeout=15,
             check=True,
         ).stdout
+
+    reference = f"{skill['revision']}:{path}"
+    try:
+        if git("cat-file", "-t", reference).strip() != b"blob":
+            raise ValueError("SKILL_MUST_BE_BLOB")
+        size = int(git("cat-file", "-s", reference))
+        if not 0 <= size <= 1_048_576:
+            raise ValueError("SKILL_TOO_LARGE")
+        content = git("show", reference)
     except (subprocess.SubprocessError, OSError):
         raise ValueError("SKILL_SOURCE_UNAVAILABLE") from None
     if len(content) > 1_048_576 or hashlib.sha256(content).hexdigest() != skill["sha256"]:
@@ -181,6 +191,18 @@ def bind_adapter(adapter):
     kind = adapter.get("kind")
     if kind not in ADAPTERS:
         raise ValueError("UNREGISTERED_ADAPTER_KIND")
+    if kind in {"raw_observation", "codex_task"}:
+        if kind == "raw_observation":
+            from .raw_owner import bind_raw
+
+            result = bind_raw(adapter)
+        else:
+            from .codex_owner import bind_codex
+
+            result = bind_codex(adapter)
+        if revision:
+            result["owner_revision"] = revision
+        return result
     if kind in {"data", "report"}:
         from .asset_owners import bind_asset
 

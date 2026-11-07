@@ -16,6 +16,7 @@
     if (cls) e.className = cls;
     return e;
   };
+  let token="", authenticationRequired=false, authEpoch=0;
   let workflows = [],
     total = 0,
     selected = null,
@@ -72,11 +73,13 @@
     return e;
   };
   async function get(path) {
+    const epoch = authEpoch;
     const r = await fetch(path, {
       cache: "no-store",
-      headers: { Accept: "application/json" },
+      headers: { Accept: "application/json", ...(token?{Authorization:"Bearer "+token}:{}) },
       signal: AbortSignal.timeout(8000),
     });
+    if (r.status===401 && epoch === authEpoch) authenticationRequired=true;
     if (!r.ok) throw Error("HTTP " + r.status);
     return r.json();
   }
@@ -139,6 +142,8 @@
       ["workflows", metrics?.workflow_count],
       ["steps", metrics?.step_count],
       ["calls", metrics?.owner_calls],
+      ["observedTokens", metrics?.observed_tokens],
+      ["unknownUsage", metrics?.usage_unknown_count],
       ["errors", metrics?.owner_errors],
       ["interventions", metrics?.operator_interventions],
       ["cost", metrics?.model_cost_usd],
@@ -231,6 +236,14 @@
           ...Object.entries(s.metrics || {}).map(([k, v]) => [k, value(v)]),
         ]),
       );
+      if (s.execution) {
+        info.append(facts([
+          ["session", unknown(s.execution.session_id)],
+          ["turn", value(s.execution.turn)],
+          ["observedTokens", value(s.execution.observed_tokens)],
+          ["cumulativeTokens", value(s.execution.cumulative_tokens)],
+        ]));
+      }
       root.append(info);
       const evidence = panel(t("evidence")),
         grid = node("div", undefined, "live-evidence");
@@ -287,6 +300,7 @@
   }
   function render() {
     renderStatic();
+    $("login").hidden=!authenticationRequired&&!token;
     $("health").textContent = healthy
       ? `${t("connected")} ${time(last)}`
       : t("outage");
@@ -298,6 +312,7 @@
   }
   async function poll(more = false) {
     if (busy) return;
+    const epoch = authEpoch;
     busy = true;
     $("refresh").disabled = true;
     try {
@@ -315,6 +330,7 @@
         ),
         get("/v1/metrics"),
       ]);
+      if (epoch !== authEpoch) return;
       const list = pages[0];
       list.workflows = pages.flatMap((p) => p.workflows);
       if (
@@ -333,6 +349,7 @@
         stepId = null;
       }
       healthy = true;
+      authenticationRequired=false;
       last = Date.now() / 1000;
       if (!selected && workflows.length) selected = workflows[0].workflow_id;
       if (selected) {
@@ -342,23 +359,27 @@
             get(`/v1/workflows/${encodeURIComponent(id)}`),
             get(`/v1/workflows/${encodeURIComponent(id)}/events?tail=100`),
           ]);
-          if (id === selected) {
+          if (epoch === authEpoch && id === selected) {
             view = v;
             events = Array.isArray(e.events) ? e.events : [];
             detailError = false;
           }
         } catch (_) {
-          detailError = true;
+          if (epoch === authEpoch) detailError = true;
         }
       }
     } catch (_) {
-      healthy = false;
+      if (epoch === authEpoch) healthy = false;
     } finally {
-      busy = false;
-      $("refresh").disabled = false;
-      render();
+      if (epoch === authEpoch) {
+        busy = false;
+        $("refresh").disabled = false;
+        render();
+      }
     }
   }
+  $("connect").onclick = () => {authEpoch++;busy=false;token=$("token").value.trim(); $("token").value=""; poll();};
+  $("disconnect").onclick = () => {authEpoch++;busy=false;token=""; $("token").value="";workflows=[];total=0;metrics=null;view=null;events=[];selected=null;healthy=false;authenticationRequired=true;render();poll();};
   $("refresh").onclick = () => poll();
   $("more").onclick = () => poll(true);
   $("search").oninput = renderList;

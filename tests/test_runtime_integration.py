@@ -2,10 +2,12 @@
 
 import json
 import os
+import sqlite3
 import subprocess
 import tempfile
 import time
 import unittest
+from contextlib import closing
 from pathlib import Path
 
 from quant_task_orchestrator.contracts import build_plan
@@ -95,9 +97,8 @@ class RealRuntimeTests(unittest.TestCase):
                 self.assertFalse(view["promotion_authorized"])
                 # Same key recovers the same workflow, including after process restart.
                 self.assertEqual(store.submit(plan)["workflow_id"], wid)
-            import sqlite3
 
-            with sqlite3.connect(root / "jobs.sqlite") as database:
+            with closing(sqlite3.connect(root / "jobs.sqlite")) as database:
                 self.assertEqual(
                     database.execute("SELECT COUNT(*) FROM backtest_jobs").fetchone()[0], 1
                 )

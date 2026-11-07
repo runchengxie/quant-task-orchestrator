@@ -44,6 +44,10 @@ class Store:
                     workflow_id TEXT NOT NULL, step_id TEXT NOT NULL,
                     snapshot TEXT NOT NULL, recorded_at TEXT NOT NULL,
                     PRIMARY KEY(workflow_id,step_id));
+                CREATE TABLE IF NOT EXISTS execution_snapshots(
+                    workflow_id TEXT NOT NULL, step_id TEXT NOT NULL,
+                    snapshot TEXT NOT NULL, recorded_at TEXT NOT NULL,
+                    PRIMARY KEY(workflow_id,step_id));
                 CREATE TABLE IF NOT EXISTS step_telemetry(
                     workflow_id TEXT NOT NULL, step_id TEXT NOT NULL,
                     owner_calls INTEGER NOT NULL DEFAULT 0, owner_errors INTEGER NOT NULL DEFAULT 0,
@@ -291,7 +295,7 @@ class Store:
 
     def auxiliary(self, table, wid, sid):
         # These query strings are static internal table names, never user input.
-        if table not in {"observations", "step_telemetry", "transitions"}:
+        if table not in {"observations", "step_telemetry", "transitions", "execution_snapshots"}:
             raise ValueError("INVALID_AUXILIARY_TABLE")
         exists = self.db.execute(
             "SELECT 1 FROM sqlite_master WHERE type='table' AND name=?", (table,)
@@ -320,17 +324,27 @@ class Store:
                 (wid, sid, canonical(safe), now()),
             )
 
-    def complete_step(self, wid, sid, status, owner_id, evidence, checks):
+    def complete_step(self, wid, sid, status, owner_id, evidence, checks, execution=None):
         definition = next(row for row in self.plan(wid)["workflow"]["steps"] if row["id"] == sid)
         kind = self.plan(wid)["adapters"][definition["adapter"]]["kind"]
         safe = project_evidence(kind, evidence, checks)["checks"]
-        # Final status, evidence snapshot and audit transition commit together.
+        from .codex_owner import project_execution
+
+        safe_execution = project_execution(execution)
+        # Final status, evidence and execution snapshots commit together.
         with self.db:
             self._set_step(wid, sid, status, owner_id, evidence)
             self.db.execute(
                 "INSERT INTO observations VALUES(?,?,?,?) ON CONFLICT(workflow_id,step_id) DO UPDATE SET snapshot=excluded.snapshot,recorded_at=excluded.recorded_at",
                 (wid, sid, canonical(safe), now()),
             )
+            if safe_execution is not None:
+                self.db.execute(
+                    "INSERT INTO execution_snapshots VALUES(?,?,?,?) "
+                    "ON CONFLICT(workflow_id,step_id) DO UPDATE SET "
+                    "snapshot=excluded.snapshot,recorded_at=excluded.recorded_at",
+                    (wid, sid, canonical(safe_execution), now()),
+                )
 
     def was_dispatched(self, wid, sid):
         row = self.db.execute(
@@ -370,6 +384,33 @@ class Store:
                 (wid, sid, int(not success), seconds),
             )
 
+    def execution(self, wid, sid):
+        from .codex_owner import project_execution
+
+        rows = self.auxiliary("execution_snapshots", wid, sid)
+        return project_execution(json.loads(rows[0]["snapshot"])) if rows else None
+
+    def execution_totals(self):
+        exists = self.db.execute(
+            "SELECT 1 FROM sqlite_master WHERE name='execution_snapshots'"
+        ).fetchone()
+        if not exists:
+            return {"observed_tokens": 0, "usage_unknown_count": 0}
+        from .codex_owner import project_execution
+
+        unique = {}
+        for row in self.db.execute("SELECT snapshot FROM execution_snapshots"):
+            execution = project_execution(json.loads(row[0]))
+            key = (execution["owner_plan_sha256"], execution["owner_id"], execution["turn"])
+            old = unique.get(key)
+            number = execution["observed_tokens"]
+            if old is None or number is not None:
+                unique[key] = number
+        return {
+            "observed_tokens": sum(n for n in unique.values() if n is not None),
+            "usage_unknown_count": sum(n is None for n in unique.values()),
+        }
+
     def metrics(self):
         states = {
             row[0]: row[1]
@@ -387,6 +428,7 @@ class Store:
         )
         return {
             "schema": "quant.orchestrator_metrics.v1",
+            **self.execution_totals(),
             "workflow_count": self.db.execute("SELECT COUNT(*) FROM workflows").fetchone()[0],
             "step_count": sum(states.values()),
             "states": states,
@@ -445,6 +487,7 @@ class Store:
                     "error_code": step["error"],
                     "updated_at": step["updated"],
                     "evidence": evidence,
+                    "execution": self.execution(wid, step["id"]),
                     "recovery": recovery_for(
                         step["status"],
                         step["error"],
