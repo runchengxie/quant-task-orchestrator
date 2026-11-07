@@ -40,6 +40,9 @@ quant-task --database "$TASK_DATABASE" inspect "$WORKFLOW_ID"
 quant-task --database "$TASK_DATABASE" serve-api --host 127.0.0.1 --port 8787
 ```
 
+Open `http://127.0.0.1:8787/` for the live read-only GUI. See
+[workbench operation](live-workbench.md).
+
 TUI: arrows scroll, `q` exits, automatic read-only refresh every second. For a
 noninteractive snapshot use `tui --once`. `tick WORKFLOW_ID` performs a single
 coordinator pass. `events WORKFLOW_ID --after SEQUENCE` reads the next ledger page.

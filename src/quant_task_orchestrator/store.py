@@ -9,6 +9,9 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 from .contracts import canonical, digest, exact, identifier
+from .evidence import project_evidence
+from .metrics import step_metrics
+from .recovery import recovery_for
 
 TERMINAL = {"SUCCEEDED", "FAILED", "CANCELLED"}
 STEP_STATES = TERMINAL | {"WAITING", "DISPATCHING", "RUNNING", "UNKNOWN", "BLOCKED"}
@@ -37,6 +40,21 @@ class Store:
                     workflow_id TEXT NOT NULL, id TEXT NOT NULL, status TEXT NOT NULL,
                     owner_id TEXT, evidence TEXT NOT NULL DEFAULT 'NOT_VERIFIED', error TEXT,
                     updated TEXT NOT NULL, PRIMARY KEY(workflow_id,id));
+                CREATE TABLE IF NOT EXISTS observations(
+                    workflow_id TEXT NOT NULL, step_id TEXT NOT NULL,
+                    snapshot TEXT NOT NULL, recorded_at TEXT NOT NULL,
+                    PRIMARY KEY(workflow_id,step_id));
+                CREATE TABLE IF NOT EXISTS step_telemetry(
+                    workflow_id TEXT NOT NULL, step_id TEXT NOT NULL,
+                    owner_calls INTEGER NOT NULL DEFAULT 0, owner_errors INTEGER NOT NULL DEFAULT 0,
+                    owner_call_wall_seconds REAL NOT NULL DEFAULT 0,
+                    PRIMARY KEY(workflow_id,step_id));
+                CREATE TABLE IF NOT EXISTS transitions(
+                    seq INTEGER PRIMARY KEY AUTOINCREMENT, workflow_id TEXT NOT NULL,
+                    step_id TEXT NOT NULL, status TEXT NOT NULL, created TEXT NOT NULL);
+                CREATE TABLE IF NOT EXISTS workflow_signals(
+                    event_id TEXT PRIMARY KEY, workflow_id TEXT NOT NULL,
+                    source TEXT NOT NULL, type TEXT NOT NULL);
                 CREATE TABLE IF NOT EXISTS events(
                     seq INTEGER PRIMARY KEY AUTOINCREMENT, workflow_id TEXT NOT NULL,
                     event_id TEXT UNIQUE, hash TEXT, type TEXT NOT NULL, step_id TEXT,
@@ -95,6 +113,10 @@ class Store:
                     "INSERT INTO steps(workflow_id,id,status,updated) VALUES(?,?,?,?)",
                     (wid, step["id"], "WAITING", timestamp),
                 )
+                self.db.execute(
+                    "INSERT INTO transitions(workflow_id,step_id,status,created) VALUES(?,?,?,?)",
+                    (wid, step["id"], "WAITING", timestamp),
+                )
             self._event(wid, "workflow.submitted")
         return {"workflow_id": wid, "created": True, "plan_sha256": fingerprint}
 
@@ -124,22 +146,37 @@ class Store:
         ]
 
     def set_step(self, wid, sid, status, owner_id=None, evidence="NOT_VERIFIED", error=None):
+        with self.db:
+            self._set_step(wid, sid, status, owner_id, evidence, error)
+
+    def _set_step(self, wid, sid, status, owner_id=None, evidence="NOT_VERIFIED", error=None):
         if status not in STEP_STATES:
             raise ValueError("INVALID_STEP_STATE")
-        with self.db:
-            current = self.db.execute(
-                "SELECT status,owner_id FROM steps WHERE workflow_id=? AND id=?", (wid, sid)
-            ).fetchone()
-            if current is None:
-                raise ValueError("STEP_NOT_FOUND")
-            if current["status"] in TERMINAL:
-                return
-            if current["owner_id"] and owner_id and current["owner_id"] != owner_id:
-                raise ValueError("OWNER_IDENTITY_MISMATCH")
-            self.db.execute(
-                "UPDATE steps SET status=?,owner_id=COALESCE(?,owner_id),evidence=?,error=?,updated=? WHERE workflow_id=? AND id=?",
-                (status, owner_id, evidence, error, now(), wid, sid),
-            )
+        current = self.db.execute(
+            "SELECT status,owner_id,evidence,error FROM steps WHERE workflow_id=? AND id=?",
+            (wid, sid),
+        ).fetchone()
+        if current is None:
+            raise ValueError("STEP_NOT_FOUND")
+        if current["status"] in TERMINAL:
+            return
+        if current["owner_id"] and owner_id and current["owner_id"] != owner_id:
+            raise ValueError("OWNER_IDENTITY_MISMATCH")
+        self.db.execute(
+            "UPDATE steps SET status=?,owner_id=COALESCE(?,owner_id),evidence=?,error=?,updated=? WHERE workflow_id=? AND id=?",
+            (status, owner_id, evidence, error, now(), wid, sid),
+        )
+        if (current["status"], current["owner_id"], current["evidence"], current["error"]) != (
+            status,
+            owner_id or current["owner_id"],
+            evidence,
+            error,
+        ):
+            if current["status"] != status:
+                self.db.execute(
+                    "INSERT INTO transitions(workflow_id,step_id,status,created) VALUES(?,?,?,?)",
+                    (wid, sid, status, now()),
+                )
             self._event(wid, "step." + status.lower(), sid)
 
     def cancel(self, wid):
@@ -151,7 +188,11 @@ class Store:
 
     def hint(self, event):
         exact(event, {"schema", "event_id", "workflow_id", "source", "type"})
-        if event["schema"] != "quant.workflow_event.v1" or event["type"] != "owner.changed":
+        if event["schema"] != "quant.workflow_event.v1" or event["type"] not in {
+            "owner.changed",
+            "data.published",
+            "report.published",
+        }:
             raise ValueError("INVALID_EVENT")
         identifier(event["event_id"])
         identifier(event["source"])
@@ -170,10 +211,28 @@ class Store:
                 "INSERT INTO events(workflow_id,event_id,hash,type,created) VALUES(?,?,?,?,?)",
                 (event["workflow_id"], event["event_id"], fingerprint, event["type"], now()),
             )
+            self.db.execute(
+                "INSERT INTO workflow_signals VALUES(?,?,?,?)",
+                (event["event_id"], event["workflow_id"], event["source"], event["type"]),
+            )
         return {"created": True, "event_id": event["event_id"]}
 
-    def events(self, wid, after=0):
+    def events(self, wid, after=0, *, tail=None):
         self.record(wid)
+        if tail is not None:
+            if type(tail) is not int or not 1 <= tail <= 500:
+                raise ValueError("INVALID_EVENT_LIMIT")
+            return list(
+                reversed(
+                    [
+                        dict(row)
+                        for row in self.db.execute(
+                            "SELECT seq,type,step_id,created FROM events WHERE workflow_id=? ORDER BY seq DESC LIMIT ?",
+                            (wid, tail),
+                        )
+                    ]
+                )
+            )
         return [
             dict(row)
             for row in self.db.execute(
@@ -181,6 +240,21 @@ class Store:
                 (wid, after),
             )
         ]
+
+    def trigger_ready(self, wid, plan=None):
+        trigger = (plan or self.plan(wid))["workflow"].get("trigger")
+        if not trigger:
+            return True
+        exists = self.db.execute(
+            "SELECT 1 FROM sqlite_master WHERE name='workflow_signals'"
+        ).fetchone()
+        return bool(
+            exists
+            and self.db.execute(
+                "SELECT 1 FROM workflow_signals WHERE workflow_id=? AND source=? AND type=? LIMIT 1",
+                (wid, trigger["source"], trigger["event_type"]),
+            ).fetchone()
+        )
 
     def scheduler_ids(self):
         return [
@@ -190,11 +264,140 @@ class Store:
             )
         ]
 
-    def list(self):
+    def list(self, limit=100, offset=0):
+        if (
+            type(limit) is not int
+            or type(offset) is not int
+            or not 1 <= limit <= 1000
+            or offset < 0
+        ):
+            raise ValueError("INVALID_PAGINATION")
         return [
             self.view(row[0])
-            for row in self.db.execute("SELECT id FROM workflows ORDER BY created DESC LIMIT 100")
+            for row in self.db.execute(
+                "SELECT id FROM workflows ORDER BY created DESC,id LIMIT ? OFFSET ?",
+                (limit, offset),
+            )
         ]
+
+    def pagination(self, limit=100, offset=0):
+        total = self.db.execute("SELECT COUNT(*) FROM workflows").fetchone()[0]
+        return {
+            "limit": limit,
+            "offset": offset,
+            "total": total,
+            "has_more": offset + limit < total,
+        }
+
+    def auxiliary(self, table, wid, sid):
+        # These query strings are static internal table names, never user input.
+        if table not in {"observations", "step_telemetry", "transitions"}:
+            raise ValueError("INVALID_AUXILIARY_TABLE")
+        exists = self.db.execute(
+            "SELECT 1 FROM sqlite_master WHERE type='table' AND name=?", (table,)
+        ).fetchone()
+        if not exists:
+            return []
+        return [
+            dict(row)
+            for row in self.db.execute(
+                f"SELECT * FROM {table} WHERE workflow_id=? AND step_id=?"
+                + (" ORDER BY seq" if table == "transitions" else ""),
+                (wid, sid),
+            )
+        ]
+
+    def observe(self, wid, sid, checks):
+        step = next((row for row in self.steps(wid) if row["id"] == sid), None)
+        if step is None:
+            raise ValueError("STEP_NOT_FOUND")
+        definition = next(row for row in self.plan(wid)["workflow"]["steps"] if row["id"] == sid)
+        kind = self.plan(wid)["adapters"][definition["adapter"]]["kind"]
+        safe = project_evidence(kind, step["evidence"], checks)["checks"]
+        with self.db:
+            self.db.execute(
+                "INSERT INTO observations VALUES(?,?,?,?) ON CONFLICT(workflow_id,step_id) DO UPDATE SET snapshot=excluded.snapshot,recorded_at=excluded.recorded_at",
+                (wid, sid, canonical(safe), now()),
+            )
+
+    def complete_step(self, wid, sid, status, owner_id, evidence, checks):
+        definition = next(row for row in self.plan(wid)["workflow"]["steps"] if row["id"] == sid)
+        kind = self.plan(wid)["adapters"][definition["adapter"]]["kind"]
+        safe = project_evidence(kind, evidence, checks)["checks"]
+        # Final status, evidence snapshot and audit transition commit together.
+        with self.db:
+            self._set_step(wid, sid, status, owner_id, evidence)
+            self.db.execute(
+                "INSERT INTO observations VALUES(?,?,?,?) ON CONFLICT(workflow_id,step_id) DO UPDATE SET snapshot=excluded.snapshot,recorded_at=excluded.recorded_at",
+                (wid, sid, canonical(safe), now()),
+            )
+
+    def was_dispatched(self, wid, sid):
+        row = self.db.execute(
+            "SELECT owner_id FROM steps WHERE workflow_id=? AND id=?", (wid, sid)
+        ).fetchone()
+        return (
+            bool(row and row[0])
+            or self.db.execute(
+                "SELECT 1 FROM events WHERE workflow_id=? AND step_id=? AND type='step.dispatching' LIMIT 1",
+                (wid, sid),
+            ).fetchone()
+            is not None
+        )
+
+    def bind_owner_id(self, wid, sid, owner_id):
+        identifier(owner_id)
+        with self.db:
+            current = self.db.execute(
+                "SELECT owner_id FROM steps WHERE workflow_id=? AND id=?", (wid, sid)
+            ).fetchone()
+            if current is None or (current[0] and current[0] != owner_id):
+                raise ValueError("OWNER_IDENTITY_MISMATCH")
+            self.db.execute(
+                "UPDATE steps SET owner_id=? WHERE workflow_id=? AND id=?", (owner_id, wid, sid)
+            )
+
+    def record_call(self, wid, sid, success, seconds):
+        if (
+            type(success) is not bool
+            or type(seconds) not in {int, float}
+            or not 0 <= seconds < float("inf")
+        ):
+            raise ValueError("INVALID_CALL_MEASUREMENT")
+        with self.db:
+            self.db.execute(
+                "INSERT INTO step_telemetry VALUES(?,?,1,?,?) ON CONFLICT(workflow_id,step_id) DO UPDATE SET owner_calls=owner_calls+1,owner_errors=owner_errors+excluded.owner_errors,owner_call_wall_seconds=owner_call_wall_seconds+excluded.owner_call_wall_seconds",
+                (wid, sid, int(not success), seconds),
+            )
+
+    def metrics(self):
+        states = {
+            row[0]: row[1]
+            for row in self.db.execute("SELECT status,COUNT(*) FROM steps GROUP BY status")
+        }
+        exists = self.db.execute(
+            "SELECT 1 FROM sqlite_master WHERE name='step_telemetry'"
+        ).fetchone()
+        calls = (
+            self.db.execute(
+                "SELECT COALESCE(SUM(owner_calls),0),COALESCE(SUM(owner_errors),0) FROM step_telemetry"
+            ).fetchone()
+            if exists
+            else (0, 0)
+        )
+        return {
+            "schema": "quant.orchestrator_metrics.v1",
+            "workflow_count": self.db.execute("SELECT COUNT(*) FROM workflows").fetchone()[0],
+            "step_count": sum(states.values()),
+            "states": states,
+            "owner_calls": calls[0],
+            "owner_errors": calls[1],
+            "operator_interventions": self.db.execute(
+                "SELECT COUNT(*) FROM events WHERE type IN ('workflow.approved','workflow.cancel_requested')"
+            ).fetchone()[0],
+            "model_cost_usd": None,
+            "cpu_seconds": None,
+        }
 
     def view(self, wid):
         row, plan = self.record(wid), self.plan(wid)
@@ -214,6 +417,8 @@ class Store:
             status = "CANCELLING"
         elif not row["approval"]:
             status = "AWAITING_APPROVAL"
+        elif not self.trigger_ready(wid, plan):
+            status = "AWAITING_EVENT"
         else:
             status = "ACTIVE"
         definitions = {step["id"]: step for step in plan["workflow"]["steps"]}
@@ -221,6 +426,13 @@ class Store:
         for step in steps:
             definition = definitions[step["id"]]
             binding = plan["adapters"][definition["adapter"]]
+            observations = self.auxiliary("observations", wid, step["id"])
+            telemetry = self.auxiliary("step_telemetry", wid, step["id"])
+            evidence = project_evidence(
+                binding["kind"],
+                step["evidence"],
+                json.loads(observations[0]["snapshot"]) if observations else {},
+            )
             projected.append(
                 {
                     "id": step["id"],
@@ -228,9 +440,24 @@ class Store:
                     "status": step["status"],
                     "owner_id": step["owner_id"],
                     "depends_on": definition["depends_on"],
+                    "requires_evidence": definition.get("requires_evidence", {}),
                     "evidence_status": step["evidence"],
                     "error_code": step["error"],
                     "updated_at": step["updated"],
+                    "evidence": evidence,
+                    "recovery": recovery_for(
+                        step["status"],
+                        step["error"],
+                        binding["kind"],
+                        step["evidence"],
+                        row["approval"] is not None,
+                    ),
+                    "metrics": step_metrics(
+                        self.auxiliary("transitions", wid, step["id"]),
+                        telemetry[0] if telemetry else None,
+                    ),
+                    "owner_revision": binding.get("owner_revision"),
+                    "observed_at": observations[0]["recorded_at"] if observations else None,
                     "budgets": {
                         key: value
                         for key, value in binding.get("budgets", {}).items()
@@ -249,6 +476,7 @@ class Store:
             "plan_sha256": row["hash"],
             "approved": row["approval"] is not None,
             "cancel_requested": bool(row["cancelled"]),
+            "trigger": plan["workflow"].get("trigger"),
             "created_at": row["created"],
             "updated_at": row["updated"],
             "steps": projected,

@@ -2,15 +2,16 @@
 
 ## Workflow and approval
 
-`quant.workflow.v1` has exactly `schema`, `idempotency_key`, `title`, `steps`.
-Each step has exactly `id`, `adapter`, `depends_on`, `skills`. IDs are bounded
+`quant.workflow.v1` requires `schema`, `idempotency_key`, `title`, `steps` and optionally a frozen `trigger`.
+Each step requires `id`, `adapter`, `depends_on`, `skills`, with optional `requires_evidence`. IDs are bounded
 ASCII identifiers. A graph must contain 1–100 unique steps and be acyclic with no
 unknown dependencies. Titles should be operator-approved display labels: redaction
 does not make arbitrary free text suitable for public publication.
 
 `quant.orchestrator_config.v1` has exactly `schema`, `adapters`, `catalog`.
 Adapters are operator configuration; a workflow references names rather than
-inventing commands. The two adapter shapes are:
+inventing commands. The original two adapter shapes are shown here. Additional data/report/native-session
+shapes and evidence gates are specified in [owner adapters](owner-adapters.md).
 
 ```json
 {"kind":"runtime","command":["/immutable/release/backtest-job","--error-format","json","--database","/data/synthetic/jobs.sqlite","--artifact-root","/data/synthetic/artifacts","--result-root","/data/synthetic/results"],"request":"/data/synthetic/request.json","queue":true}
@@ -53,7 +54,7 @@ research evidence. Unknown owner states fail closed. Owner identities cannot cha
 once recorded. Workflow state is derived independently of owner evidence state.
 
 `quant.workflow_event.v1` contains exactly `schema`, `event_id`, `workflow_id`,
-`source`, `type=owner.changed`. Identical event IDs are deduplicated; conflicting
+`source`, `type` (`owner.changed`, `data.published`, or `report.published`). Identical event IDs are deduplicated; conflicting
 reuse is rejected. An event persists only a hint. Regular polling rereads owners;
 there is no trusted webhook, notification delivery or event-authentication layer.
 
@@ -63,9 +64,11 @@ Bind only to IPv4 loopback. No CORS, browser writes or external interface enable
 
 | Route | Contract |
 | --- | --- |
-| `GET /v1/workflows` | `quant.workflow_list.v1`, newest 100 workflow projections |
+| `GET /v1/workflows` | `quant.workflow_list.v1`, paginated workflow projections |
 | `GET /v1/workflows/{id}` | `quant.workflow_view.v1` |
 | `GET /v1/workflows/{id}/events?after=0` | `quant.workflow_events.v1`, up to 500 events after sequence |
+
+The [live workbench](live-workbench.md) documents pagination, metrics and event-tail routes.
 
 Writes return HTTP 405. Reads use SQLite read-only mode and never invoke owners,
 recover leases, mutate task state or create a missing database. SQLite may create

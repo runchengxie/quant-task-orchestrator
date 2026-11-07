@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "quant-task-orchestrator"
-version = "0.1.0"
+version = "0.2.0"
 description = "Thin, owner-aware coordination for quantitative research workflows"
 requires-python = ">=3.12"
 license = "MIT"
@@ -23,3 +23,6 @@ line-length = 100
 
 [tool.ruff.lint]
 select = ["E4", "E7", "E9", "F", "I", "UP"]
+
+[tool.hatch.build.targets.wheel.force-include]
+"site" = "quant_task_orchestrator/web"

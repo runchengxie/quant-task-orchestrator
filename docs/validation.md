@@ -1,5 +1,8 @@
 # Validation and limits
 
+For the next-stage live workbench, owner adapters and retained native evidence, see
+[workbench acceptance](workbench-validation.md). The limits below describe v0.1.
+
 The initial implementation was validated on 2026-11-07. Exact delivery revisions
 and remote CI results are recorded in the implementing pull request; local tests
 used the complete task worktree, including the final regression fixes.
