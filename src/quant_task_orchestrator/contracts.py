@@ -191,6 +191,13 @@ def bind_adapter(adapter):
     kind = adapter.get("kind")
     if kind not in ADAPTERS:
         raise ValueError("UNREGISTERED_ADAPTER_KIND")
+    if kind == "research_snapshot":
+        from .research_snapshot import bind_snapshot
+
+        result = bind_snapshot(adapter)
+        if revision:
+            result["owner_revision"] = revision
+        return result
     if kind in {"raw_observation", "codex_task"}:
         if kind == "raw_observation":
             from .raw_owner import bind_raw

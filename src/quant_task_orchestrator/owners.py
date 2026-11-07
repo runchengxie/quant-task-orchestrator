@@ -130,6 +130,11 @@ class Owner:
         return receipt
 
     def start(self):
+        if self.binding["kind"] == "research_snapshot":
+            from .research_snapshot import observe
+
+            return observe(self.binding, self)
+
         if self.binding["kind"] == "raw_observation":
             from .raw_owner import observe
 
@@ -156,6 +161,11 @@ class Owner:
         )
 
     def inspect(self, owner_id):
+        if self.binding["kind"] == "research_snapshot":
+            from .research_snapshot import observe
+
+            return observe(self.binding, self)
+
         if self.binding["kind"] == "codex_task":
             from .codex_owner import dispatch
 
@@ -186,6 +196,11 @@ class Owner:
         )
 
     def cancel(self, owner_id):
+        if self.binding["kind"] == "research_snapshot":
+            from .research_snapshot import observe
+
+            return observe(self.binding, self)
+
         if self.binding["kind"] == "codex_task":
             from .codex_owner import dispatch
 
@@ -204,7 +219,7 @@ class Owner:
         return self.call(["cancel", owner_id])
 
     def identity(self, receipt):
-        if self.binding["kind"] in {"raw_observation", "codex_task"}:
+        if self.binding["kind"] in {"raw_observation", "codex_task", "research_snapshot"}:
             return self.grade(receipt)[1]
         if self.binding["kind"] in {"data", "report"}:
             from .asset_owners import grade_asset
@@ -220,6 +235,11 @@ class Owner:
         return identity
 
     def evidence(self, receipt):
+        if self.binding["kind"] == "research_snapshot":
+            from .research_snapshot import evidence_snapshot
+
+            return evidence_snapshot(self.binding, receipt)
+
         if self.binding["kind"] == "raw_observation":
             from .raw_owner import evidence_raw
 
@@ -250,6 +270,11 @@ class Owner:
         return None
 
     def grade(self, receipt):
+        if self.binding["kind"] == "research_snapshot":
+            from .research_snapshot import grade_snapshot
+
+            return grade_snapshot(self.binding, receipt)
+
         if self.binding["kind"] == "raw_observation":
             from .raw_owner import grade_raw
 
