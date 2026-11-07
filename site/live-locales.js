@@ -1,6 +1,9 @@
 "use strict";
 window.liveLocales = {
   en: {
+    session:"Codex session",turn:"Turn",observedTokens:"Observed tokens",cumulativeTokens:"Cumulative tokens",unknownUsage:"Turns with unknown usage",
+    tokenLabel:"Private API token",connect:"Connect",disconnect:"Forget token",
+    tokenMemory:"The token stays in this page's memory and is never stored in a URL or browser storage.",
     evidenceState: "Owner evidence state",
     awaiting_event: "Awaiting publication hint",
     inspect_dependencies: "Inspect upstream dependencies",
@@ -111,6 +114,9 @@ window.liveLocales = {
     code: "Recovery code",
   },
   "zh-CN": {
+    session:"Codex 会话",turn:"轮次",observedTokens:"已观测 Token",cumulativeTokens:"累计 Token",unknownUsage:"用量未知的轮次",
+    tokenLabel:"私有 API 令牌",connect:"连接",disconnect:"忘记令牌",
+    tokenMemory:"令牌仅保存在当前页面内存中，不写入网址或浏览器存储。",
     evidenceState: "Owner 证据状态",
     awaiting_event: "等待发布事件提示",
     inspect_dependencies: "检查上游依赖",

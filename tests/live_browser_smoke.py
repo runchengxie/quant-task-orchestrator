@@ -163,7 +163,7 @@ def fixture_smoke():
     print("Live browser fixture smoke passed")
 
 
-def real_database_smoke():
+def real_database_smoke(private=False):
     """Serve the production API against a new temporary coordinator SQLite DB."""
     sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
     from quant_task_orchestrator.api import handler_for
@@ -206,7 +206,8 @@ def real_database_smoke():
         database = root / "coordinator.sqlite"
         with Store(database) as store:
             receipt = store.submit(build_plan(workflow, config))
-        server = ThreadingHTTPServer(("127.0.0.1", 0), handler_for(database))
+        token = "browser-acceptance-" + "x" * 48 if private else None
+        server = ThreadingHTTPServer(("127.0.0.1", 0), handler_for(database, token=token))
         threading.Thread(target=server.serve_forever, daemon=True).start()
         try:
             with sync_playwright() as playwright:
@@ -217,6 +218,13 @@ def real_database_smoke():
                 errors = []
                 page.on("pageerror", lambda error: errors.append(str(error)))
                 page.goto(f"http://127.0.0.1:{server.server_port}/")
+                if private:
+                    expect(page.locator("#login")).to_be_visible()
+                    page.locator("#token").fill(token)
+                    page.locator("#connect").click()
+                    expect(page.locator("#token")).to_have_value("")
+                    assert page.evaluate("JSON.stringify(localStorage)") == "{}"
+                    assert page.evaluate("JSON.stringify(sessionStorage)") == "{}"
                 expect(page.locator("#health")).to_contain_text("Connected")
                 expect(page.locator(".live-workflow")).to_have_count(1)
                 expect(page.locator("#detail")).to_contain_text("Retained browser acceptance")
@@ -232,6 +240,31 @@ def real_database_smoke():
                         receipt["workflow_id"], "compute", "BLOCKED", error="OWNER_UNAVAILABLE"
                     )
                 expect(page.locator("#detail")).to_contain_text("OWNER_UNAVAILABLE", timeout=10000)
+                if private:
+                    delayed = []
+
+                    def delay_authenticated(route):
+                        if route.request.headers.get("authorization"):
+                            delayed.append((route, route.fetch()))
+                        else:
+                            route.continue_()
+
+                    page.route("**/v1/workflows?*", delay_authenticated)
+                    page.locator("#refresh").click()
+                    expect(page.locator("#refresh")).to_be_disabled()
+                    for _ in range(50):
+                        if delayed:
+                            break
+                        page.wait_for_timeout(100)
+                    assert delayed
+                    page.locator("#disconnect").click()
+                    for route, response in delayed:
+                        route.fulfill(response=response)
+                    page.wait_for_timeout(200)
+                    expect(page.locator("#login")).to_be_visible()
+                    expect(page.locator(".live-workflow")).to_have_count(0)
+                    page.reload()
+                    expect(page.locator("#login")).to_be_visible()
                 assert not errors, errors
                 browser.close()
         finally:
@@ -242,4 +275,5 @@ def real_database_smoke():
 
 if __name__ == "__main__":
     real_database_smoke()
+    real_database_smoke(private=True)
     fixture_smoke()

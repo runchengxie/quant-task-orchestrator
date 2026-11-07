@@ -39,6 +39,23 @@ class Owner:
             for k in ("PATH", "LANG", "LC_ALL", "LD_LIBRARY_PATH", "TMPDIR")
             if k in os.environ
         }
+        if self.binding["kind"] == "codex_task":
+            # Preserve the CLI's normal authentication location and transport.
+            # Values are inherited only; never read credential files or project them.
+            for key in (
+                "HOME",
+                "CODEX_HOME",
+                "HTTP_PROXY",
+                "HTTPS_PROXY",
+                "ALL_PROXY",
+                "NO_PROXY",
+                "http_proxy",
+                "https_proxy",
+                "all_proxy",
+                "no_proxy",
+            ):
+                if key in os.environ:
+                    environment[key] = os.environ[key]
         environment["PYTHONNOUSERSITE"] = "1"
         with tempfile.TemporaryFile() as out, tempfile.TemporaryFile() as err:
             process = subprocess.Popen(
@@ -113,6 +130,14 @@ class Owner:
         return receipt
 
     def start(self):
+        if self.binding["kind"] == "raw_observation":
+            from .raw_owner import observe
+
+            return observe(self.binding, self)
+        if self.binding["kind"] == "codex_task":
+            from .codex_owner import dispatch
+
+            return dispatch(self.binding, "start", self)
         if self.binding["kind"] in {"data", "report"}:
             from .asset_owners import start_asset
 
@@ -131,6 +156,15 @@ class Owner:
         )
 
     def inspect(self, owner_id):
+        if self.binding["kind"] == "codex_task":
+            from .codex_owner import dispatch
+
+            return dispatch(self.binding, "inspect", self)
+        if self.binding["kind"] == "raw_observation":
+            receipt = self.start()
+            if owner_id is not None and self.identity(receipt) != owner_id:
+                raise OwnerError("OWNER_IDENTITY_MISMATCH")
+            return receipt
         if self.binding["kind"] in {"data", "report", "native_session"}:
             receipt = self.start()
             if owner_id is not None and self.identity(receipt) != owner_id:
@@ -152,6 +186,12 @@ class Owner:
         )
 
     def cancel(self, owner_id):
+        if self.binding["kind"] == "codex_task":
+            from .codex_owner import dispatch
+
+            return dispatch(self.binding, "cancel", self)
+        if self.binding["kind"] == "raw_observation":
+            return self.inspect(owner_id)
         if self.binding["kind"] in {"data", "report", "native_session"}:
             return self.inspect(owner_id)
         if self.binding["kind"] == "research":
@@ -164,6 +204,8 @@ class Owner:
         return self.call(["cancel", owner_id])
 
     def identity(self, receipt):
+        if self.binding["kind"] in {"raw_observation", "codex_task"}:
+            return self.grade(receipt)[1]
         if self.binding["kind"] in {"data", "report"}:
             from .asset_owners import grade_asset
 
@@ -178,6 +220,10 @@ class Owner:
         return identity
 
     def evidence(self, receipt):
+        if self.binding["kind"] == "raw_observation":
+            from .raw_owner import evidence_raw
+
+            return evidence_raw(self.binding, receipt)
         if self.binding["kind"] in {"data", "report"}:
             from .asset_owners import evidence_asset
 
@@ -196,7 +242,22 @@ class Owner:
             )
         return {}
 
+    def execution(self, receipt):
+        if self.binding["kind"] == "codex_task":
+            from .codex_owner import execution_codex
+
+            return execution_codex(self.binding, receipt)
+        return None
+
     def grade(self, receipt):
+        if self.binding["kind"] == "raw_observation":
+            from .raw_owner import grade_raw
+
+            return grade_raw(self.binding, receipt)
+        if self.binding["kind"] == "codex_task":
+            from .codex_owner import grade_codex
+
+            return grade_codex(self.binding, receipt)
         if self.binding["kind"] in {"data", "report"}:
             from .asset_owners import grade_asset
 

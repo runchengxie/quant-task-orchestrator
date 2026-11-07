@@ -7,6 +7,7 @@ from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, urlsplit
 
+from .auth import authorized, read_token
 from .store import Store
 
 ASSETS = {
@@ -31,7 +32,7 @@ def asset_root():
     return installed if installed.is_dir() else Path(__file__).resolve().parents[2] / "site"
 
 
-def handler_for(database):
+def handler_for(database, *, token=None):
     class Handler(BaseHTTPRequestHandler):
         def log_message(self, *_):
             pass
@@ -81,6 +82,8 @@ def handler_for(database):
                     return self.respond(200, file.read_bytes(), TYPES[file.suffix])
                 except OSError:
                     return self.send_json(503, {"code": "WORKBENCH_ASSETS_UNAVAILABLE"})
+            if not authorized(self.headers.get("Authorization"), token):
+                return self.send_json(401, {"code": "AUTHENTICATION_REQUIRED"})
             parts = url.path.strip("/").split("/")
             query = parse_qs(url.query)
             try:
@@ -99,7 +102,14 @@ def handler_for(database):
                 return self.send_json(400, {"code": "INVALID_QUERY"})
             try:
                 with Store(database, readonly=True) as store:
-                    if parts == ["v1", "workflows"]:
+                    if parts == ["v1", "health"]:
+                        result = {
+                            "schema": "quant.workbench_health.v1",
+                            "status": "ok",
+                            "mode": "read_only",
+                            "authentication_required": token is not None,
+                        }
+                    elif parts == ["v1", "workflows"]:
                         result = {
                             "schema": "quant.workflow_list.v1",
                             "workflows": store.list(limit, offset),
@@ -136,10 +146,12 @@ def handler_for(database):
     return Handler
 
 
-def serve(database, host="127.0.0.1", port=8787):
+def serve(database, host="127.0.0.1", port=8787, token_file=None):
     if not ipaddress.ip_address(host).is_loopback or ":" in host:
         raise ValueError("IPV4_LOOPBACK_REQUIRED")
     with Store(database, readonly=True):
         pass
-    with HTTPServer((host, port), handler_for(database)) as server:
+    with HTTPServer(
+        (host, port), handler_for(database, token=read_token(token_file) if token_file else None)
+    ) as server:
         server.serve_forever()
