@@ -1,0 +1,6 @@
+{
+  "schema": "quant.workflow.v1",
+  "idempotency_key": "synthetic-research-001",
+  "title": "Synthetic backtest validation",
+  "steps": [{"id": "backtest", "adapter": "runtime", "depends_on": [], "skills": []}]
+}
