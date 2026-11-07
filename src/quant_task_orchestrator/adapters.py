@@ -1,6 +1,11 @@
 """Explicit adapter registry. Discovery never expands execution authority."""
 
 ADAPTERS = {
+    "research_snapshot": {
+        "owner": "quant-research",
+        "contract": "research.tool-response/v1",
+        "effects": [],
+    },
     "raw_observation": {
         "owner": "quant-market-data-platform",
         "contract": "quant.raw_observation_assessment.v1",

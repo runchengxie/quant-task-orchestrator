@@ -74,7 +74,7 @@ def validate_codex(binding, receipt):
     session = receipt.get("session")
     if session is not None:
         identifier(session)
-    if binding.get("action") == "resume" and session != binding["session_id"]:
+    if binding.get("action") in {"resume", "observe"} and session != binding["session_id"]:
         raise ValueError("CODEX_RESUME_SESSION_MISMATCH")
     if receipt["status"] in TERMINAL:
         _terminal(binding, receipt)
@@ -86,7 +86,7 @@ def bind_codex(adapter):
 
     exact(adapter, {"kind", "command", "config", "key", "action", "session_id", "receipt"})
     identifier(adapter["key"])
-    if adapter["action"] not in {"start", "resume"}:
+    if adapter["action"] not in {"start", "resume", "observe"}:
         raise ValueError("INVALID_CODEX_ACTION")
     command = adapter["command"]
     if (
@@ -99,6 +99,20 @@ def bind_codex(adapter):
     if not all(Path(p).is_absolute() and Path(p).is_file() for p in files):
         raise ValueError("ABSOLUTE_OWNER_INPUT_REQUIRED")
     config = read_json(adapter["config"])
+    if config.get("schema") not in {"research.codex-task/v1", "research.codex-task/v2"}:
+        raise ValueError("UNSUPPORTED_CODEX_CONFIG")
+    policy = "tool-free-read-only"
+    if config["schema"] == "research.codex-task/v2":
+        profile = config.get("tool_profile")
+        if not isinstance(profile, str) or not Path(profile).is_absolute():
+            raise ValueError("ABSOLUTE_TOOL_PROFILE_REQUIRED")
+        if file_sha(profile) != config.get("tool_profile_sha256"):
+            raise ValueError("TOOL_PROFILE_HASH_MISMATCH")
+        for key in ("tool_gateway_sha256", "tool_python_sha256"):
+            if not isinstance(config.get(key), str) or not SHA.fullmatch(config[key]):
+                raise ValueError("EXACT_TOOL_HASH_REQUIRED")
+        files.append(profile)
+        policy = "research-read-only"
     for field in ("executable", "prompt_file"):
         path = config.get(field)
         if not isinstance(path, str) or not Path(path).is_absolute() or not Path(path).is_file():
@@ -121,9 +135,15 @@ def bind_codex(adapter):
         plan.get("plan_sha256") != binding["owner_plan_sha256"]
         or plan.get("config_sha256") != binding["owner_plan_sha256"]
         or plan.get("config") != config
-        or plan.get("tool_policy") != "tool-free-read-only"
+        or plan.get("tool_policy") != policy
     ):
         raise ValueError("INVALID_CODEX_OWNER_PLAN")
+    if config["schema"] == "research.codex-task/v2" and (
+        plan.get("tool_profile_sha256") != config["tool_profile_sha256"]
+        or type(plan.get("tool_call_limit_per_turn")) is not int
+        or plan["tool_call_limit_per_turn"] != 32
+    ):
+        raise ValueError("INVALID_TOOL_OWNER_PLAN")
     if adapter["action"] == "start":
         if adapter["session_id"] is not None or adapter["receipt"] is not None:
             raise ValueError("START_CANNOT_SELECT_SESSION")
@@ -138,7 +158,8 @@ def bind_codex(adapter):
         validate_codex({**binding, "action": "start"}, prior)
         if prior["status"] != "completed" or prior["session"] != adapter["session_id"]:
             raise ValueError("INVALID_PRIOR_CODEX_RECEIPT")
-        binding["target_turn"] += 1
+        if adapter["action"] == "resume":
+            binding["target_turn"] += 1
         binding["pins"][str(path)] = file_sha(path)
         if prior.get("events_sha256"):
             events = path.with_suffix(".events.jsonl")
@@ -150,6 +171,10 @@ def dispatch(binding, operation, caller=None):
     from .owners import Owner
 
     _pins(binding)
+    if binding["action"] == "observe":
+        receipt = read_json(binding["receipt"])
+        receipt.update(receipt=binding["receipt"], receipt_sha256=file_sha(binding["receipt"]))
+        return validate_codex(binding, receipt)
     actual = binding["action"] if operation == "start" else operation
     args = ["--config", binding["config"], actual, "--key", binding["key"]]
     if actual in {"start", "resume"}:

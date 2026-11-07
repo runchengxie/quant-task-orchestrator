@@ -51,6 +51,28 @@ def _operations_parsers(commands):
     backup = commands.add_parser("backup", help="Create and integrity-check a new SQLite backup")
     backup.add_argument("--source", required=True, type=Path)
     backup.add_argument("--destination", required=True, type=Path)
+    shadow = commands.add_parser(
+        "shadow-check", help="Run hash-approved read-only data checks in a new isolated namespace"
+    )
+    shadow.add_argument("--config", type=Path, required=True)
+    shadow.add_argument("--expected-config-sha256", required=True)
+    shadow.add_argument("--output-root", type=Path, required=True)
+    storage = commands.add_parser(
+        "storage-check", help="Read disk availability without deleting files"
+    )
+    storage.add_argument("--root", type=Path, required=True)
+    storage.add_argument("--minimum-free-bytes", type=int, default=1_073_741_824)
+    restore = commands.add_parser("restore", help="Verify and restore a backup to a new target")
+    restore.add_argument("--source", required=True, type=Path)
+    restore.add_argument("--destination", required=True, type=Path)
+    restore.add_argument("--sha256", required=True)
+    migration = commands.add_parser(
+        "migration-check", help="Check ownership without switching schedules"
+    )
+    migration.add_argument("--input", required=True, type=Path)
+    preview = commands.add_parser("outbox-preview", help="Preview a notification without sending")
+    preview.add_argument("notification_id")
+    preview.add_argument("--ledger", required=True, type=Path)
     health = commands.add_parser(
         "health", help="Verify an explicit loopback read-only workbench health endpoint"
     )
@@ -62,6 +84,28 @@ def _independent_operation(args):
     from .deployment import backup_database, service_unit, stage_release, verify_health
     from .event_inbox import acknowledge_notification, list_notifications, safe_path
 
+    if args.command == "shadow-check":
+        from .shadow import run_shadow
+
+        return run_shadow(args.config, args.expected_config_sha256, args.output_root)
+    if args.command == "storage-check":
+        from .ops import storage_assessment
+
+        return storage_assessment(args.root, minimum_free_bytes=args.minimum_free_bytes)
+    if args.command in {"restore", "migration-check", "outbox-preview"}:
+        from .ops import dispatch_notification, restore_database, scheduler_migration_plan
+
+        if args.command == "restore":
+            return restore_database(args.source, args.destination, args.sha256)
+        if args.command == "outbox-preview":
+            return dispatch_notification(args.ledger, args.notification_id)
+        from .contracts import exact
+
+        request = read_json(args.input)
+        exact(request, {"schema", "old_owner", "new_owner", "old_active", "new_active"})
+        if request.pop("schema") != "quant.scheduler_migration_request.v1":
+            raise ValueError("INVALID_MIGRATION_REQUEST")
+        return scheduler_migration_plan(**request)
     if args.command == "outbox-list":
         return {
             "notifications": list_notifications(args.ledger, include_acked=args.include_acked),
@@ -142,6 +186,7 @@ def main(argv=None):
             "report",
             "native_session",
             "raw_observation",
+            "research_snapshot",
             "codex_task",
         ),
         required=True,
@@ -178,6 +223,11 @@ def main(argv=None):
     args = parser.parse_args(argv)
     try:
         if args.command in {
+            "shadow-check",
+            "storage-check",
+            "restore",
+            "migration-check",
+            "outbox-preview",
             "outbox-list",
             "outbox-ack",
             "skill-install",

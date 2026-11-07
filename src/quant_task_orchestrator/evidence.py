@@ -26,6 +26,7 @@ def project_evidence(kind, evidence_status, observed):
         "research": "quant-research",
         "native_session": "quant-research",
         "codex_task": "quant-research",
+        "research_snapshot": "quant-research",
         "raw_observation": "quant-market-data-platform",
         "data": "quant-market-data-platform",
         "report": "quant-intel-platform",

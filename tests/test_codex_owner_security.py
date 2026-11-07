@@ -83,6 +83,49 @@ class CodexProtocolTests(unittest.TestCase):
         self.assertEqual(done["owner_id"], receipt["owner_id"])
         self.assertEqual(json.loads(self.state.read_text())["_operations"].count("resume"), 1)
 
+    def test_v2_profile_is_bound_and_tampering_stops_dispatch(self):
+        profile = self.root / "tool-profile.json"
+        profile.write_text('{"schema":"research.tool-profile/v1","resources":{}}')
+        config = json.loads(self.config.read_text())
+        config.update(
+            schema="research.codex-task/v2",
+            tool_profile=str(profile),
+            tool_profile_sha256=hashlib.sha256(profile.read_bytes()).hexdigest(),
+            tool_gateway_sha256="a" * 64,
+            tool_python_sha256="b" * 64,
+        )
+        self.config.write_text(json.dumps(config))
+        binding = bind_codex(self.adapter)
+        self.assertIn(str(profile), binding["pins"])
+        profile.write_text("{}")
+        with self.assertRaisesRegex(ValueError, "BINDING_CHANGED"):
+            dispatch(binding, "start")
+
+    def test_observe_binds_completed_turn_without_any_owner_execution(self):
+        _, receipt = self.completed()
+        observed = bind_codex(
+            {
+                **self.adapter,
+                "action": "observe",
+                "session_id": receipt["session"],
+                "receipt": receipt["receipt"],
+            }
+        )
+        before = self.state.read_bytes()
+
+        class ForbiddenOwner:
+            def call(self, *args, **kwargs):
+                raise AssertionError("observe must not call the owner")
+
+        for operation in ("start", "inspect", "cancel"):
+            result = dispatch(observed, operation, ForbiddenOwner())
+            self.assertEqual(grade_codex(observed, result)[0], "SUCCEEDED")
+            self.assertEqual(result["turn"], 1)
+        self.assertEqual(self.state.read_bytes(), before)
+        Path(receipt["receipt"]).write_text("{}")
+        with self.assertRaisesRegex(ValueError, "BINDING_CHANGED"):
+            dispatch(observed, "start", ForbiddenOwner())
+
     def test_resume_wrong_session_and_changed_prior_bytes_are_rejected(self):
         binding, receipt = self.completed()
         adapter = {

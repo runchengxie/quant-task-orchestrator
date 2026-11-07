@@ -28,6 +28,7 @@ class AdapterWorkbenchTests(unittest.TestCase):
                 "native_session",
                 "codex_task",
                 "raw_observation",
+                "research_snapshot",
             },
         )
         self.assertEqual(

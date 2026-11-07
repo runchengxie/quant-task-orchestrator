@@ -20,7 +20,13 @@ if operation == "plan":
                 "plan_sha256": plan,
                 "config_sha256": plan,
                 "config": config,
-                "tool_policy": "tool-free-read-only",
+                "tool_policy": "research-read-only"
+                if config["schema"] == "research.codex-task/v2"
+                else "tool-free-read-only",
+                "tool_profile_sha256": config.get("tool_profile_sha256"),
+                "tool_call_limit_per_turn": 32
+                if config["schema"] == "research.codex-task/v2"
+                else 0,
                 "side_effect_scope": "tool-free-read-only; local journal/events/session persistence only",
             }
         )
