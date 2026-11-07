@@ -69,3 +69,23 @@ The Skill catalog verifies source locks but does not install or run capabilities
 The Pages demo is browser-local simulation, not an authenticated live GUI. Data,
 reports and multi-agent session adapters remain later extensions. No production
 schedules were migrated and no availability/load or multi-host test was claimed.
+
+## Evidence and insights increment (0.5)
+
+The configured installed-owner suite ran 149 tests: all passed, no skips. It
+included scope/expiry dispatch gates, malformed evidence refusal, complete cache
+projection, concurrent impact scans, bounded history import, fixed trace checks,
+and isolated public demo runs. Static/format/compilation and frontend syntax
+checks passed. Existing static/live/authenticated browser suites and the new
+insights suite passed, including four separate delayed-response logout races.
+An installed wheel ran outside the source checkout and served the four insight
+panels with no private dependencies, credentials or model calls.
+
+The Research history provider merged in
+[PR #654](https://github.com/runchengxie/quant-research/pull/654)
+(`4e65fd8b22f9cb18cba4522fa1975a111c8855e5`), with eight tests and independent
+review. A selected retained validation collection exported two unclassified
+records through the actual owner; consumer import/search passed and source bytes
+were unchanged. This is selected-source contract acceptance, not a workspace-wide
+history inventory or discovery of negative economic conclusions. No new model
+performance or financial research claim follows from these tests.

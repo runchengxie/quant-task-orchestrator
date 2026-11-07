@@ -1,6 +1,7 @@
 """Typed, conservative evidence projection; never forward raw Owner payloads."""
 
 from .contracts import SHA
+from .evidence_scope import assess_check, metadata
 
 DIMENSIONS = (
     "input_integrity",
@@ -41,22 +42,44 @@ def project_evidence(kind, evidence_status, observed):
     if isinstance(observed, dict):
         for name in DIMENSIONS:
             raw = observed.get(name)
-            if name == "promotion" or not isinstance(raw, dict):
+            if name == "promotion" or name not in observed:
+                continue
+            if not isinstance(raw, dict):
+                checks[name] = {"status": "unknown", "source": source, "metadata_invalid": True}
                 continue
             status, owner, fingerprint = (
                 raw.get("status"),
                 raw.get("source"),
                 raw.get("evidence_sha256"),
             )
-            if status not in STATUSES or owner not in SOURCES:
+            if (
+                not isinstance(status, str)
+                or not isinstance(owner, str)
+                or status not in STATUSES
+                or owner not in SOURCES
+            ):
+                checks[name] = {"status": "unknown", "source": source, "metadata_invalid": True}
+                checks[name].update(metadata(raw))
                 continue
             if fingerprint is not None and (
                 not isinstance(fingerprint, str) or not SHA.fullmatch(fingerprint)
             ):
+                checks[name] = {"status": "unknown", "source": source, "metadata_invalid": True}
+                checks[name].update(metadata(raw))
+                continue
+            if owner != source and any(
+                key in raw for key in ("scope", "assessed_at", "valid_until")
+            ):
+                # A source string cannot delegate scoped authority across owners.
+                checks[name] = {"status": "unknown", "source": source, "metadata_invalid": True}
+                checks[name].update(metadata(raw))
                 continue
             checks[name] = {"status": status, "source": owner}
             if fingerprint:
                 checks[name]["evidence_sha256"] = fingerprint
+            checks[name].update(metadata(raw))
     # A coordination observation never grants promotion, regardless of an Owner claim.
     checks["promotion"] = {"status": "unknown", "source": "quant-research"}
+    for name, check in checks.items():
+        check["applicability"] = assess_check(check, dimension=name)
     return {"schema": "quant.evidence_view.v1", "checks": checks}

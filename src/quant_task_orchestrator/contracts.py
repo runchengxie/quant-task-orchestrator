@@ -38,11 +38,14 @@ def read_json(path):
             result[key] = value
         return result
 
-    return json.loads(
-        source.read_text(),
-        object_pairs_hook=unique,
-        parse_constant=lambda _: (_ for _ in ()).throw(ValueError("NONFINITE_JSON")),
-    )
+    try:
+        return json.loads(
+            source.read_text(),
+            object_pairs_hook=unique,
+            parse_constant=lambda _: (_ for _ in ()).throw(ValueError("NONFINITE_JSON")),
+        )
+    except (RecursionError, UnicodeError):
+        raise ValueError("INVALID_JSON_ENCODING_OR_DEPTH") from None
 
 
 def identifier(value):
@@ -86,6 +89,11 @@ def validate_workflow(workflow, config):
     seen = {}
     for step in steps:
         fields = {"id", "adapter", "depends_on", "skills"}
+        if "evidence_context" in step:
+            fields.add("evidence_context")
+            from .evidence_scope import validate_context
+
+            validate_context(step["evidence_context"])
         if "requires_evidence" in step:
             fields.add("requires_evidence")
         exact(step, fields)

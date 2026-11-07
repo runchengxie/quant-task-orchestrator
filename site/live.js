@@ -257,12 +257,15 @@
       ].forEach((k) => {
         const c = s.evidence?.checks?.[k] || {},
           e = node("div", undefined, "live-check");
-        e.append(
-          node("strong", t(k === "promotion" ? "promotionCheck" : k)),
-          badge(c.status),
-          node("p", `${t("source")}: ${unknown(c.source)}`),
-          node("p", `${t("digest")}: ${unknown(c.evidence_sha256)}`),
-        );
+        const applicability=c.applicability;
+        const evidenceBadge=badge(c.status);
+        if(applicability?.usable!==true || applicability?.code === "LEGACY_UNSCOPED") evidenceBadge.classList.remove("good");
+        e.append(node("strong",t(k === "promotion" ? "promotionCheck" : k)),evidenceBadge,
+          node("p",`${t("source")}: ${unknown(c.source)}`),
+          node("p",`${t("applicability")}: ${applicability ? t(applicability.code) : t("applicabilityUnknown")}`,applicability?.usable===true?"live-muted":"insight-warning"),
+          node("p",t(applicability?.usable===true?"usable":"notUsable")),
+          facts([["marketAsOf",time(c.scope?.as_of)],["assessedAt",time(c.assessed_at)],["validUntil",time(c.valid_until)]]),
+          fingerprintDetails([["digest",unknown(c.evidence_sha256)],["dataHash",unknown(c.scope?.data_sha256)],["strategyHash",unknown(c.scope?.strategy_sha256)],["universeHash",unknown(c.scope?.universe_sha256)],["sampleStart",unknown(c.scope?.sample_start)],["sampleEnd",unknown(c.scope?.sample_end)]]));
         grid.append(e);
       });
       evidence.append(grid);
@@ -298,6 +301,103 @@
     ep.append(list);
     root.append(ep);
   }
+  const insightState = {compare:null, history:null, impact:null, evaluation:null};
+  const insightStatus = {}, insightSequence = {};
+  let historyOffset = 0;
+  function clearInsights() {
+    Object.keys(insightState).forEach(k => {insightState[k]=null; delete insightStatus[k]; insightSequence[k]=(insightSequence[k]||0)+1;});
+    historyOffset=0;
+    ["compare-before","compare-after","history-query","impact-previous","impact-next","impact-target"].forEach(id => $(id).value="");
+    $("history-classification").value="";
+    $("impact-kind").value="owner_revision";
+    $("insights").open=false;
+  }
+  function table(headers, rows) {
+    const wrapper=node("div",undefined,"insight-table-wrap"), tab=node("table"), head=node("tr");
+    headers.forEach(h=>head.append(node("th",t(h))));
+    const thead=node("thead"); thead.append(head); tab.append(thead);
+    const body=node("tbody"); rows.forEach(row=>{const tr=node("tr");row.forEach(cell=>tr.append(node("td",unknown(cell))));body.append(tr);});
+    tab.append(body); wrapper.append(tab); return wrapper;
+  }
+  function fingerprintDetails(pairs) {
+    const detail=node("details"); detail.append(node("summary",t("scopeDetails")), facts(pairs)); return detail;
+  }
+  function renderInsights() {
+    const options=$("workflow-options"); options.replaceChildren();
+    workflows.forEach(w=>{const option=node("option",w.title||w.workflow_id);option.value=w.workflow_id;options.append(option);});
+    Object.keys(insightState).forEach(k=>{
+      const root=$(k+"-result"), data=insightState[k]; root.replaceChildren();
+      if(insightStatus[k]) root.append(node("p",t(insightStatus[k]),"live-muted"));
+      $(k+"-load").disabled=insightStatus[k]==="insightLoading";
+      if(!data) return;
+      if(k==="compare") {
+        const steps=Array.isArray(data.steps)?data.steps:[];
+        root.append(node("p",`${t("changedSteps")}: ${steps.filter(s=>s.status!=="unchanged").length}`));
+        root.append(node("p",t("economicUnavailable"),"insight-warning"));
+        root.append(table(["steps","status","differences"],steps.map(s=>[s.id,t(s.status),(s.changed_fields||[]).map(t).join(", ")||t("none")])));
+        steps.filter(s=>s.status!=="unchanged").forEach(s=>{
+          const detail=node("details");detail.append(node("summary",s.id));
+          (s.changed_fields||[]).forEach(field=>detail.append(facts([["differences",t(field)],["beforeWorkflow",unknown(s.before?.[field])],["afterWorkflow",unknown(s.after?.[field])]])));
+          root.append(detail);
+        });
+      } else if(k==="history") {
+        root.append(facts([["historyCount",unknown(data.total)],["historySource",unknown(data.snapshot_sha256)]]));
+        if(!data.records?.length) root.append(node("p",t("noResults")));
+        (data.records||[]).forEach(record=>{
+          const article=node("article",undefined,"insight-record");
+          article.append(node("h3",t(record.classification)),facts([["recordId",unknown(record.record_id)],["status",unknown(record.status)],["evidenceState",unknown(record.evidence_stage)],["topics",(record.topic_tags||[]).join(", ")||t("none")],["revisit",(record.revisit_conditions||[]).join(", ")||t("none")]]));root.append(article);
+        });
+      } else if(k==="impact") {
+        root.append(node("p",t("notExecuted"),"insight-warning"),facts([["scanScope",unknown(data.scan?.scope)],["scanned",unknown(data.scan?.workflows_scanned)],["consistency",unknown(data.scan?.consistency)]]));
+        root.append(table(["workflows","directSteps","downstreamSteps"],(data.affected_workflows||[]).map(w=>[w.workflow_id,w.direct_steps?.join(", ")||t("none"),w.downstream_steps?.join(", ")||t("none")])));
+        root.append(node("p",t("scanCaution"),"live-muted"));
+      } else {
+        root.append(node("p",t("provenanceUnverified"),"insight-warning"));
+        if(!data.reports?.length) root.append(node("p",t("noResults")));
+        (data.reports||[]).forEach(report=>{
+          const article=node("article",undefined,"insight-record");
+          article.append(node("h3",t(report.evaluation_scope==="reference-not-model"?"referenceOnly":"recordedOnly")),facts([["evaluationScope",unknown(report.evaluation_scope)],["modelEvaluated",t("no")],["passedCases",`${unknown(report.passed)} / ${unknown(report.total)}`],["suiteVersion",unknown(report.suite_version)],["observedTokens",unknown(report.observed_tokens)],["calls",unknown(report.tool_calls)],["toolFailures",unknown(report.tool_failures)],["humanTakeovers",unknown(report.human_takeovers)],["unknownUsageEvents",unknown(report.unknown_usage_events)]]),fingerprintDetails([["suiteHash",unknown(report.suite_sha256)],["traceHash",unknown(report.trace_sha256)]]));
+          article.append(table(["steps","status","missingEvidence"],(report.cases||[]).map(c=>[c.id,t(c.passed?"succeeded":"failed"),(c.missing_evidence||[]).join(", ")||t("none")])));root.append(article);
+        });
+      }
+    });
+    $("history-next").hidden=insightState.history?.next_offset===null || insightState.history?.next_offset===undefined;
+    $("history-next").disabled=insightStatus.history==="insightLoading";
+  }
+  async function loadInsight(kind, path, schema) {
+    const epoch=authEpoch, sequence=(insightSequence[kind]||0)+1;
+    insightSequence[kind]=sequence;insightState[kind]=null;insightStatus[kind]="insightLoading";renderInsights();
+    try {
+      const response=await get(path);
+      if(epoch!==authEpoch || sequence!==insightSequence[kind]) return;
+      if(response.schema!==schema) throw Error("Invalid API");
+      insightState[kind]=response;delete insightStatus[kind];
+    } catch(_) {
+      if(epoch!==authEpoch || sequence!==insightSequence[kind]) return;
+      insightStatus[kind]="insightFailed";
+    } finally {
+      if(epoch===authEpoch && sequence===insightSequence[kind]) render();
+    }
+  }
+  function loadHistory(offset=0) {
+    historyOffset=offset;
+    const params=new URLSearchParams({limit:"50",offset:String(historyOffset)});
+    if($("history-query").value.trim()) params.set("q",$("history-query").value.trim());
+    if($("history-classification").value) params.set("classification",$("history-classification").value);
+    // Pin pagination to the imported snapshot observed on the first page.
+    if(offset && insightState.history?.snapshot_sha256) params.set("snapshot_sha256",insightState.history.snapshot_sha256);
+    loadInsight("history","/v1/history?"+params,"quant.research_history.v1");
+  }
+  $("compare-load").onclick=()=>loadInsight("compare","/v1/compare?"+new URLSearchParams({before:$("compare-before").value.trim(),after:$("compare-after").value.trim()}),"quant.workflow_comparison.v1");
+  $("history-load").onclick=()=>loadHistory();
+  $("history-next").onclick=()=>loadHistory(insightState.history?.next_offset||0);
+  $("impact-load").onclick=()=>{
+    const proposal={schema:"quant.change_proposal.v1",kind:$("impact-kind").value,previous:$("impact-previous").value.trim(),next:$("impact-next").value.trim()};
+    if($("impact-target").value.trim()) proposal.target=$("impact-target").value.trim();
+    loadInsight("impact","/v1/impact?"+new URLSearchParams({proposal:JSON.stringify(proposal)}),"quant.change_impact.v1");
+  };
+  $("evaluation-load").onclick=()=>loadInsight("evaluation","/v1/evaluations","quant.evaluation_list.v1");
+
   function render() {
     renderStatic();
     $("login").hidden=!authenticationRequired&&!token;
@@ -309,6 +409,7 @@
     renderMetrics();
     renderList();
     renderDetail();
+    renderInsights();
   }
   async function poll(more = false) {
     if (busy) return;
@@ -378,8 +479,8 @@
       }
     }
   }
-  $("connect").onclick = () => {authEpoch++;busy=false;token=$("token").value.trim(); $("token").value=""; poll();};
-  $("disconnect").onclick = () => {authEpoch++;busy=false;token=""; $("token").value="";workflows=[];total=0;metrics=null;view=null;events=[];selected=null;healthy=false;authenticationRequired=true;render();poll();};
+  $("connect").onclick = () => {authEpoch++;busy=false;clearInsights();token=$("token").value.trim(); $("token").value=""; poll();};
+  $("disconnect").onclick = () => {authEpoch++;busy=false;clearInsights();token=""; $("token").value="";workflows=[];total=0;metrics=null;view=null;events=[];selected=null;healthy=false;authenticationRequired=true;render();poll();};
   $("refresh").onclick = () => poll();
   $("more").onclick = () => poll(true);
   $("search").oninput = renderList;

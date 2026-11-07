@@ -21,25 +21,27 @@ admission, evidence and promotion.** A successful backtest never approves a stra
 - Live read-only local GUI, TUI and loopback JSON API with optional private bearer authentication.
 - Data/report owner verification, raw observation byte verification, retained native-session inspection.
 - Durable inbox/outbox, verified backup restore, storage and scheduler migration preflight.
-- Explicit evidence gates plus observed workflow durations, owner calls and operator actions.
+- Evidence scope/expiry admission, engineering comparisons and read-only change-impact previews.
+- Pinned Research history search and fixed trace evaluation, with explicit provenance limits.
 - Responsive English/Chinese GitHub Pages demo using fictional data and simulated controls.
 
 Python 3.12+ on Linux, no runtime dependencies. Single machine, one coordinator per
-database. This is an initial coordination release, not a distributed scheduler.
-Existing owners remain independently operable. Production schedules are unchanged.
+database; each Owner remains independently operable. Production schedules are unchanged.
 
 ## Start here
 
 ```sh
 python -m pip install .
-quant-task --help
-quant-task --database "$TASK_DATABASE" tui --once
-quant-task --database "$TASK_DATABASE" serve-api --port 8787
+quant-task demo --output-root /absolute/external/demo-data --serve
 ```
 
-`TASK_DATABASE` must refer to an existing coordinator database for read operations.
-See [setup and synthetic quickstart](docs/setup.md) to create one.
+Replace the output root with a directory outside your checkout, then open
+`http://127.0.0.1:8787/`. This local demo needs no private repositories, models,
+credentials or network. All demo evidence and history are synthetic. For real
+owner setup and existing databases, see [setup](docs/setup.md).
 
+- [Evidence applicability](docs/evidence-applicability.md), [comparison and impact](docs/insights.md)
+- [Offline demo and trace evaluation](docs/public-demo.md), [history snapshots](docs/history.md)
 - [Live workbench](docs/live-workbench.md) and [owner adapters](docs/owner-adapters.md)
 - [Workbench acceptance and limits](docs/workbench-validation.md)
 - [Architecture and owner boundaries](docs/architecture.md)

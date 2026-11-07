@@ -32,6 +32,10 @@ class Store:
             self.db = sqlite3.connect(self.path, timeout=10)
             self.db.executescript("""
                 PRAGMA journal_mode=WAL;
+                CREATE TABLE IF NOT EXISTS research_history_snapshots(
+                    snapshot_sha256 TEXT PRIMARY KEY, source_revision TEXT NOT NULL, payload TEXT NOT NULL);
+                CREATE TABLE IF NOT EXISTS evaluation_reports(
+                    report_sha256 TEXT PRIMARY KEY, payload TEXT NOT NULL);
                 CREATE TABLE IF NOT EXISTS workflows(
                     id TEXT PRIMARY KEY, key TEXT UNIQUE NOT NULL, hash TEXT NOT NULL,
                     plan TEXT NOT NULL, approval TEXT, cancelled INTEGER NOT NULL DEFAULT 0,
@@ -441,6 +445,15 @@ class Store:
             "cpu_seconds": None,
         }
 
+    @staticmethod
+    def evidence_context(definition):
+        from .evidence_scope import validate_context
+
+        try:
+            return validate_context(definition["evidence_context"])
+        except (KeyError, ValueError, TypeError, OverflowError):
+            return None
+
     def view(self, wid):
         row, plan = self.record(wid), self.plan(wid)
         steps = self.steps(wid)
@@ -483,6 +496,7 @@ class Store:
                     "owner_id": step["owner_id"],
                     "depends_on": definition["depends_on"],
                     "requires_evidence": definition.get("requires_evidence", {}),
+                    "evidence_context": self.evidence_context(definition),
                     "evidence_status": step["evidence"],
                     "error_code": step["error"],
                     "updated_at": step["updated"],

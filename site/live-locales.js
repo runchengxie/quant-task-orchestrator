@@ -224,3 +224,34 @@ window.liveLocales = {
     code: "恢复代码",
   },
 };
+Object.assign(window.liveLocales.en, {
+  insights:"Evidence and history insights",insightsReadOnly:"Read-only comparisons and recorded evidence. No execution or approval.",
+  compareTitle:"Compare workflows",beforeWorkflow:"Before workflow",afterWorkflow:"After workflow",compareLoad:"Compare",changedSteps:"Changed steps",differences:"Differences",economicUnavailable:"Economic comparison unavailable; engineering differences do not establish investment performance.",
+  historyTitle:"Research history",historySearch:"Search retained history",classification:"Classification",allClassifications:"All classifications",research_conclusion:"Research conclusion",operational_failure:"Operational failure",unclassified:"Unclassified",historyLoad:"Search history",nextPage:"Next page",topics:"Topics",revisit:"Revisit conditions",recordId:"Record digest",historyCount:"Matching records",historySource:"Imported snapshot",
+  impactTitle:"Preview change impact",changeKind:"Change kind",ownerRevision:"Owner revision",skillRevision:"Skill revision",pinnedInput:"Pinned input",previousPin:"Previous hash",nextPin:"Next hash",optionalTarget:"Target (optional)",impactLoad:"Preview",directSteps:"Direct steps",downstreamSteps:"Downstream steps",scanScope:"Scan scope",scanned:"Workflows scanned",consistency:"Read consistency",notExecuted:"Preview only. No change was executed; a new plan and approval review are required.",
+  evaluationTitle:"Recorded tool-trace evaluations",evaluationLoad:"Load evaluations",provenanceUnverified:"Provenance unverified. Recorded inputs are claims, not verified model runs.",referenceOnly:"Reference fixture: demonstrates the harness, not model reliability.",recordedOnly:"Recorded trace only; no model was invoked by this evaluator.",modelEvaluated:"Model evaluated",passedCases:"Passing cases",suiteVersion:"Suite version",suiteHash:"Suite digest",traceHash:"Trace digest",missingEvidence:"Missing evidence",toolFailures:"Tool failures",humanTakeovers:"Human takeovers",unknownUsageEvents:"Events with unknown usage",evaluationScope:"Evaluation scope",
+  insightLoading:"Loading…",insightFailed:"Read unavailable. Check access and inputs, then retry.",noResults:"No retained results.",applicability:"Evidence applicability",scopeDetails:"Scope and complete fingerprints",marketAsOf:"Market as-of (UTC)",assessedAt:"Evidence assessed (UTC)",validUntil:"Assessment valid until (UTC)",sampleStart:"Sample start date",sampleEnd:"Sample end date",dataHash:"Data fingerprint",strategyHash:"Strategy fingerprint",universeHash:"Universe fingerprint",usable:"Owner check recorded; confirm scope and validity before reuse.",notUsable:"Evidence is not usable for this scope",applicabilityUnknown:"Applicability unavailable; do not assume current validity.",
+  EXPIRED:"Expired",INVALID_SCOPE:"Invalid scope",MISSING_SCOPE:"Missing scope",SCOPE_UNAVAILABLE:"Scope unavailable",INVALID_METADATA:"Invalid metadata",NOT_VERIFIED:"Not verified",VALIDITY_UNAVAILABLE:"Validity unavailable",INVALID_VALIDITY:"Invalid validity",ASSESSMENT_IN_FUTURE:"Assessment is in the future",UNSUITABLE_AUTHORITY:"Unsuitable authority",IDENTITY_MISMATCH:"Fingerprint mismatch",AS_OF_MISMATCH:"Market as-of mismatch",SAMPLE_NOT_COVERED:"Sample not covered",APPLICABLE:"Applicable",LEGACY_UNSCOPED:"Legacy evidence without scope",CURRENT_UNSCOPED:"Current assessment without requested scope"
+});
+Object.assign(window.liveLocales["zh-CN"], {
+  insights:"证据与历史分析",insightsReadOnly:"只读比较与已记录证据。不会执行任务或批准变更。",
+  compareTitle:"比较工作流",beforeWorkflow:"变更前工作流",afterWorkflow:"变更后工作流",compareLoad:"比较",changedSteps:"发生变化的步骤",differences:"差异",economicUnavailable:"暂不能比较经济表现；工程差异不能证明投资表现。",
+  historyTitle:"研究历史",historySearch:"搜索已保留的历史",classification:"分类",allClassifications:"全部分类",research_conclusion:"研究结论",operational_failure:"运行故障",unclassified:"未分类",historyLoad:"搜索历史",nextPage:"下一页",topics:"主题",revisit:"重新检查条件",recordId:"记录摘要",historyCount:"匹配记录数",historySource:"导入快照",
+  impactTitle:"预览变更影响",changeKind:"变更类型",ownerRevision:"负责人代码版本",skillRevision:"技能版本",pinnedInput:"锁定输入",previousPin:"原哈希",nextPin:"新哈希",optionalTarget:"目标（可选）",impactLoad:"预览",directSteps:"直接受影响步骤",downstreamSteps:"下游步骤",scanScope:"扫描范围",scanned:"已扫描工作流",consistency:"读取一致性",notExecuted:"仅作预览，未执行变更；需要新计划与批准范围复核。",
+  evaluationTitle:"已记录工具轨迹评测",evaluationLoad:"读取评测",provenanceUnverified:"来源未经核验。轨迹内容是提交者的声明，不代表已验证的模型调用。",referenceOnly:"参考夹具：只演示评测程序，不能证明模型可靠。",recordedOnly:"仅检查已记录轨迹；评测器未调用模型。",modelEvaluated:"已评测模型",passedCases:"通过案例",suiteVersion:"规则版本",suiteHash:"规则摘要",traceHash:"轨迹摘要",missingEvidence:"缺失证据",toolFailures:"工具失败次数",humanTakeovers:"人工接管次数",unknownUsageEvents:"用量未知事件数",evaluationScope:"评测范围",
+  insightLoading:"正在读取…",insightFailed:"暂无法读取。请检查访问权限和输入后重试。",noResults:"暂无保留结果。",applicability:"证据适用性",scopeDetails:"适用范围与完整指纹",marketAsOf:"市场数据时点（UTC）",assessedAt:"证据评估时间（UTC）",validUntil:"评估有效期至（UTC）",sampleStart:"样本起始日期",sampleEnd:"样本结束日期",dataHash:"数据指纹",strategyHash:"策略指纹",universeHash:"研究范围指纹",usable:"已记录 Owner 检查；复用前请核对范围与有效期。",notUsable:"证据不适用于此范围",applicabilityUnknown:"适用性未知，请勿假定证据仍然有效。",
+  EXPIRED:"已过期",INVALID_SCOPE:"范围无效",MISSING_SCOPE:"缺少范围",SCOPE_UNAVAILABLE:"范围不可用",INVALID_METADATA:"元数据无效",NOT_VERIFIED:"未验证",VALIDITY_UNAVAILABLE:"有效期未知",INVALID_VALIDITY:"有效期无效",ASSESSMENT_IN_FUTURE:"评估时间在未来",UNSUITABLE_AUTHORITY:"证据来源权限不适用",IDENTITY_MISMATCH:"指纹不一致",AS_OF_MISMATCH:"市场时点不一致",SAMPLE_NOT_COVERED:"未覆盖样本",APPLICABLE:"适用",LEGACY_UNSCOPED:"历史证据未声明范围",CURRENT_UNSCOPED:"当前评估未指定请求范围"
+});
+Object.assign(window.liveLocales.en, {
+  added:"Added",removed:"Removed",changed:"Changed",unchanged:"Unchanged",
+  owner_revision:"Owner revision",owner_plan_sha256:"Owner plan digest",owner_request_sha256:"Owner request digest",pinned_input_sha256:"Pinned input digests",skills:"Skills",depends_on:"Dependencies",budgets:"Budgets",evidence_context:"Evidence scope",observed_usage:"Observed usage",kind:"Adapter kind",
+  scanCaution:"The scan describes retained references only. It does not prove runtime or economic compatibility."
+});
+Object.assign(window.liveLocales["zh-CN"], {
+  added:"新增",removed:"移除",changed:"已变化",unchanged:"未变化",
+  owner_revision:"负责人代码版本",owner_plan_sha256:"负责人计划摘要",owner_request_sha256:"负责人请求摘要",pinned_input_sha256:"锁定输入摘要",skills:"技能",depends_on:"依赖",budgets:"预算",evidence_context:"证据范围",observed_usage:"观测用量",kind:"适配器类型",
+  scanCaution:"扫描仅描述保留记录中的引用关系，不能证明运行或经济结论兼容。"
+});
+
+Object.assign(window.liveLocales.en, {EVIDENCE_IDENTITY_UNAVAILABLE:"Evidence identity unavailable",INVALID_CONTEXT:"Invalid requested scope"});
+Object.assign(window.liveLocales["zh-CN"], {EVIDENCE_IDENTITY_UNAVAILABLE:"证据身份不可用",INVALID_CONTEXT:"请求范围无效"});
