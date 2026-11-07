@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Research workbench</title>
+    <link rel="icon" href="./favicon.svg" />
+    <link rel="stylesheet" href="./styles.css" />
+    <link rel="stylesheet" href="./live.css" />
+    <script src="./live-locales.js" defer></script>
+    <script src="./live.js" defer></script>
+  </head>
+  <body>
+    <a class="skip" href="#main" data-i18n="skip">Skip to content</a>
+    <aside class="live-sidebar">
+      <a class="live-brand" href="./"
+        >q / research<span data-i18n="workbench">Research workbench</span></a
+      >
+      <div class="live-mode" data-i18n="readonly">LIVE · READ ONLY</div>
+      <p data-i18n="authority">
+        Owners retain authority. This view never approves research or authorizes
+        promotion.
+      </p>
+      <label for="language" data-i18n="language">Language</label
+      ><select id="language">
+        <option value="en">English</option>
+        <option value="zh-CN">简体中文</option>
+      </select>
+      <div class="live-sidebar-bottom" data-i18n="polling">
+        Refreshes every 5 seconds · All times UTC
+      </div>
+    </aside>
+    <main id="main" class="live-main">
+      <header class="live-header">
+        <div>
+          <p class="live-eyebrow" data-i18n="operations">RESEARCH OPERATIONS</p>
+          <h1 data-i18n="workbench">Research workbench</h1>
+          <p data-i18n="subtitle">
+            Follow execution, inspect evidence, and understand what needs
+            attention.
+          </p>
+        </div>
+        <button id="refresh" data-i18n="refresh">Refresh now</button>
+      </header>
+      <div
+        id="health"
+        class="live-health"
+        role="status"
+        aria-live="polite"
+      ></div>
+      <a
+        id="setup"
+        hidden
+        href="https://github.com/runchengxie/quant-task-orchestrator#readme"
+        data-i18n="setup"
+        >Open local setup instructions</a
+      >
+      <section
+        id="metrics"
+        class="live-metrics"
+        aria-label="Operational metrics"
+      ></section>
+      <div class="live-columns">
+        <section class="live-panel live-workflows">
+          <h2 data-i18n="workflows">Workflows</h2>
+          <label for="search" data-i18n="search">Search loaded workflows</label
+          ><input id="search" type="search" autocomplete="off" /><label
+            for="status"
+            data-i18n="filter"
+            >Status</label
+          ><select id="status">
+            <option value="" data-i18n="all">All statuses</option>
+          </select>
+          <div id="workflows"></div>
+          <button id="more" hidden data-i18n="more">Load more</button>
+        </section>
+        <section id="detail" class="live-detail" aria-live="polite"></section>
+      </div>
+    </main>
+  </body>
+</html>

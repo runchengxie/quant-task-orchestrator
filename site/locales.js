@@ -1,6 +1,7 @@
 "use strict";
 window.LOCALES = {
   en: {
+    liveSetup: "Run the live read-only workbench →",
     ownerPair: "Runtime + Data Owner",
     skip: "Skip to workflows",
     workspace: "Research workspace",
@@ -138,6 +139,7 @@ window.LOCALES = {
     time4: "09:42:21",
   },
   "zh-CN": {
+    liveSetup: "运行本地实时只读工作台 →",
     ownerPair: "Runtime 与数据 Owner",
     skip: "跳转到工作流",
     workspace: "投研工作空间",

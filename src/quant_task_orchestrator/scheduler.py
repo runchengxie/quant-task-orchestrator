@@ -32,6 +32,8 @@ class Scheduler:
                     for step in self.store.steps(wid):
                         self.store.set_step(wid, step["id"], "CANCELLED")
                 return self.store.view(wid)
+            if not row["cancelled"] and not self.store.trigger_ready(wid, plan):
+                return self.store.view(wid)
             steps = {step["id"]: step for step in self.store.steps(wid)}
             for definition in plan["workflow"]["steps"]:
                 sid = definition["id"]
@@ -51,34 +53,53 @@ class Scheduler:
                 except (ValueError, OSError):
                     self.store.set_step(wid, sid, "BLOCKED", error="OWNER_BINDING_CHANGED")
                     continue
-                owner = Owner(plan["adapters"][definition["adapter"]])
+                owner = Owner(
+                    plan["adapters"][definition["adapter"]],
+                    on_call=lambda success, seconds, sid=sid: self.store.record_call(
+                        wid, sid, success, seconds
+                    ),
+                )
                 # Cancellation is read again immediately before each potential dispatch.
                 cancelled = self.store.record(wid)["cancelled"]
                 try:
+                    dispatched = self.store.was_dispatched(wid, sid)
                     if cancelled:
-                        if step["status"] == "WAITING":
+                        if not dispatched:
                             self.store.set_step(wid, sid, "CANCELLED")
                             continue
                         receipt = owner.cancel(step["owner_id"])
+                    elif step["status"] == "BLOCKED" and not dispatched:
+                        # A pre-dispatch blocker cannot be recovered by adopting
+                        # somebody else's existing Owner job, nor bypass gates.
+                        continue
                     elif step["status"] in {"DISPATCHING", "UNKNOWN", "RUNNING", "BLOCKED"}:
                         receipt = owner.inspect(step["owner_id"])
                     elif all(
                         current_steps[dep]["status"] == "SUCCEEDED"
                         for dep in definition["depends_on"]
                     ):
+                        dependencies = {item["id"]: item for item in self.store.view(wid)["steps"]}
+                        if any(
+                            dependencies[dep]["evidence"]["checks"][name]["status"] != "verified"
+                            for dep, checks in definition.get("requires_evidence", {}).items()
+                            for name in checks
+                        ):
+                            self.store.set_step(
+                                wid, sid, "BLOCKED", error="EVIDENCE_REQUIREMENTS_UNMET"
+                            )
+                            continue
                         self.store.set_step(wid, sid, "DISPATCHING")
                         receipt = owner.start()
                     else:
                         continue
                     # Persist the identity before asking the owner to verify result files.
-                    identity = receipt.get(
-                        "job_id" if owner.binding["kind"] == "runtime" else "proposal_id"
-                    )
+                    identity = owner.identity(receipt)
                     if not isinstance(identity, str) or not identity:
                         raise OwnerError("OWNER_IDENTITY_MISMATCH")
-                    self.store.set_step(wid, sid, "RUNNING", owner_id=identity)
+                    self.store.bind_owner_id(wid, sid, identity)
                     status, owner_id, evidence = owner.grade(receipt)
-                    self.store.set_step(wid, sid, status, owner_id, evidence)
+                    checks = owner.evidence(receipt)
+                    self.store.complete_step(wid, sid, status, owner_id, evidence, checks)
                 except (OwnerError, OSError, ValueError) as exc:
                     code = (
                         exc.code if isinstance(exc, OwnerError) else "OWNER_OPERATION_UNAVAILABLE"

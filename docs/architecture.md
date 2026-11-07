@@ -46,7 +46,10 @@ loopback API. The Pages demo illustrates a future browser workbench, including
 data/PIT/review stages beyond the two executable adapter kinds in v0.1. Its
 fictional Skill revision labels are not installable catalog entries. It never
 connects to the loopback API, loads owner configuration or publishes private state.
-A live authenticated GUI can reuse the projection in a subsequent release.
+A same-origin local read-only GUI now consumes the real API, with bundled assets
+and independent evidence/recovery panels. It is separate from the synthetic Pages
+demo. Authenticated remote deployment remains a subsequent release. See
+[the workbench](live-workbench.md) and [owner adapters](owner-adapters.md).
 
 ## Scope boundaries
 

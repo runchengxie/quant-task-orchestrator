@@ -7,6 +7,7 @@ import os
 import signal
 import subprocess
 import tempfile
+import time
 
 
 class OwnerError(RuntimeError):
@@ -16,10 +17,21 @@ class OwnerError(RuntimeError):
 
 
 class Owner:
-    def __init__(self, binding):
+    def __init__(self, binding, on_call=None):
         self.binding = binding
+        self.on_call = on_call
 
     def call(self, arguments, *, accepted=(0,)):
+        started, success = time.monotonic(), False
+        try:
+            value = self._call(arguments, accepted=accepted)
+            success = True
+            return value
+        finally:
+            if self.on_call:
+                self.on_call(success, time.monotonic() - started)
+
+    def _call(self, arguments, *, accepted=(0,)):
         # Bound file-backed capture prevents unbounded Python heap consumption.
         # OS disk quotas remain the operator's responsibility for a misbehaving CLI.
         environment = {
@@ -101,6 +113,14 @@ class Owner:
         return receipt
 
     def start(self):
+        if self.binding["kind"] in {"data", "report"}:
+            from .asset_owners import start_asset
+
+            return start_asset(self.binding, self)
+        if self.binding["kind"] == "native_session":
+            from .native_owner import start_native
+
+            return start_native(self.binding, self)
         if self.binding["kind"] == "runtime":
             existing = self.runtime_lookup()
             return (
@@ -111,6 +131,11 @@ class Owner:
         )
 
     def inspect(self, owner_id):
+        if self.binding["kind"] in {"data", "report", "native_session"}:
+            receipt = self.start()
+            if owner_id is not None and self.identity(receipt) != owner_id:
+                raise OwnerError("OWNER_IDENTITY_MISMATCH")
+            return receipt
         if self.binding["kind"] == "runtime":
             receipt = (
                 self.runtime_lookup() if owner_id is None else self.call(["inspect", owner_id])
@@ -127,6 +152,8 @@ class Owner:
         )
 
     def cancel(self, owner_id):
+        if self.binding["kind"] in {"data", "report", "native_session"}:
+            return self.inspect(owner_id)
         if self.binding["kind"] == "research":
             receipt = self.inspect(owner_id)
             if receipt.get("state") in {"SUPPORTED", "DISCARDED", "DIAGNOSTIC_COMPLETED"}:
@@ -136,7 +163,48 @@ class Owner:
             owner_id = self.inspect(None)["job_id"]
         return self.call(["cancel", owner_id])
 
+    def identity(self, receipt):
+        if self.binding["kind"] in {"data", "report"}:
+            from .asset_owners import grade_asset
+
+            return grade_asset(self.binding, receipt)[1]
+        if self.binding["kind"] == "native_session":
+            from .native_owner import grade_native
+
+            return grade_native(self.binding, receipt)[1]
+        identity = receipt.get("job_id" if self.binding["kind"] == "runtime" else "proposal_id")
+        if self.binding["kind"] == "research" and identity != self.binding["proposal_id"]:
+            raise OwnerError("OWNER_IDENTITY_MISMATCH")
+        return identity
+
+    def evidence(self, receipt):
+        if self.binding["kind"] in {"data", "report"}:
+            from .asset_owners import evidence_asset
+
+            return evidence_asset(self.binding, receipt)
+        if self.binding["kind"] == "runtime":
+            return (
+                {
+                    "input_integrity": {
+                        "status": "verified",
+                        "source": "quant-backtest-runtime",
+                        "evidence_sha256": self.binding["owner_request_sha256"],
+                    }
+                }
+                if receipt.get("status") == "SUCCEEDED"
+                else {}
+            )
+        return {}
+
     def grade(self, receipt):
+        if self.binding["kind"] in {"data", "report"}:
+            from .asset_owners import grade_asset
+
+            return grade_asset(self.binding, receipt)
+        if self.binding["kind"] == "native_session":
+            from .native_owner import grade_native
+
+            return grade_native(self.binding, receipt)
         if self.binding["kind"] == "runtime":
             owner_id, state = receipt.get("job_id"), receipt.get("status")
             if not isinstance(owner_id, str) or not owner_id:

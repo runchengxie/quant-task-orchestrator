@@ -27,7 +27,10 @@ def main(argv=None):
     approve.add_argument("workflow_id")
     approve.add_argument("--plan-sha256", required=True)
     approve.add_argument(
-        "--allow-kind", action="append", choices=("runtime", "research"), required=True
+        "--allow-kind",
+        action="append",
+        choices=("runtime", "research", "data", "report", "native_session"),
+        required=True,
     )
     approve.add_argument("--operator", required=True)
     for operation in ("inspect", "cancel", "tick", "events"):
@@ -35,7 +38,15 @@ def main(argv=None):
         command.add_argument("workflow_id")
         if operation == "events":
             command.add_argument("--after", type=int, default=0)
-    commands.add_parser("list")
+    listing = commands.add_parser("list")
+    listing.add_argument("--limit", type=int, default=100)
+    listing.add_argument("--offset", type=int, default=0)
+    commands.add_parser("metrics")
+    commands.add_parser("capabilities")
+    conformance = commands.add_parser("conformance")
+    conformance.add_argument("--config", type=Path, required=True)
+    recovery = commands.add_parser("recovery")
+    recovery.add_argument("workflow_id")
     event = commands.add_parser("event")
     event.add_argument("--file", required=True, type=Path)
     run = commands.add_parser("run")
@@ -48,7 +59,35 @@ def main(argv=None):
     api.add_argument("--port", type=int, default=8787)
     args = parser.parse_args(argv)
     try:
-        if args.command == "plan":
+        if args.command == "capabilities":
+            from .adapters import adapter_catalog
+
+            result = adapter_catalog()
+        elif args.command == "conformance":
+            from .contracts import bind_adapter, exact
+
+            config = read_json(args.config)
+            exact(config, {"schema", "adapters", "catalog"})
+            if config["schema"] != "quant.orchestrator_config.v1":
+                raise ValueError("INVALID_CONFIG")
+            result = {
+                "schema": "quant.adapter_conformance.v1",
+                "permission_grant": False,
+                "adapters": [],
+            }
+            for name, adapter in config["adapters"].items():
+                bound = bind_adapter(adapter)
+                result["adapters"].append(
+                    {
+                        "id": name,
+                        "kind": bound["kind"],
+                        "owner_revision": bound.get("owner_revision"),
+                        "contract_validated": True,
+                        "pin_count": len(bound["pins"]),
+                        "fault_injection_tested": False,
+                    }
+                )
+        elif args.command == "plan":
             result = build_plan(read_json(args.workflow), read_json(args.config))
             if args.output:
                 # Plans contain private configuration locators. Never overwrite evidence.
@@ -68,7 +107,7 @@ def main(argv=None):
 
                 serve(args.database, args.host, args.port)
                 return 0
-            readonly = args.command in {"inspect", "list", "events"}
+            readonly = args.command in {"inspect", "list", "events", "metrics", "recovery"}
             with Store(args.database, readonly=readonly) as store:
                 if args.command == "submit":
                     plan = read_json(args.plan)
@@ -83,7 +122,20 @@ def main(argv=None):
                 elif args.command == "inspect":
                     result = store.view(args.workflow_id)
                 elif args.command == "list":
-                    result = {"schema": "quant.workflow_list.v1", "workflows": store.list()}
+                    result = {
+                        "schema": "quant.workflow_list.v1",
+                        "workflows": store.list(args.limit, args.offset),
+                        "pagination": store.pagination(args.limit, args.offset),
+                    }
+                elif args.command == "metrics":
+                    result = store.metrics()
+                elif args.command == "recovery":
+                    view = store.view(args.workflow_id)
+                    result = {
+                        "schema": "quant.workflow_recovery.v1",
+                        "workflow_id": args.workflow_id,
+                        "steps": [{"id": step["id"], **step["recovery"]} for step in view["steps"]],
+                    }
                 elif args.command == "events":
                     result = {"events": store.events(args.workflow_id, max(0, args.after))}
                 elif args.command == "event":

@@ -57,7 +57,18 @@ def exact(value, keys):
 
 
 def validate_workflow(workflow, config):
-    exact(workflow, {"schema", "idempotency_key", "title", "steps"})
+    fields = {"schema", "idempotency_key", "title", "steps"}
+    if "trigger" in workflow:
+        fields.add("trigger")
+        exact(workflow["trigger"], {"source", "event_type"})
+        identifier(workflow["trigger"]["source"])
+        if workflow["trigger"]["event_type"] not in {
+            "owner.changed",
+            "data.published",
+            "report.published",
+        }:
+            raise ValueError("INVALID_TRIGGER")
+    exact(workflow, fields)
     exact(config, {"schema", "adapters", "catalog"})
     if (
         workflow["schema"] != "quant.workflow.v1"
@@ -74,7 +85,21 @@ def validate_workflow(workflow, config):
         raise ValueError("INVALID_STEPS")
     seen = {}
     for step in steps:
-        exact(step, {"id", "adapter", "depends_on", "skills"})
+        fields = {"id", "adapter", "depends_on", "skills"}
+        if "requires_evidence" in step:
+            fields.add("requires_evidence")
+        exact(step, fields)
+        requirements = step.get("requires_evidence", {})
+        from .evidence import DIMENSIONS
+
+        if not isinstance(requirements, dict) or any(
+            dep not in step["depends_on"]
+            or not isinstance(checks, list)
+            or not checks
+            or any(name not in DIMENSIONS for name in checks)
+            for dep, checks in requirements.items()
+        ):
+            raise ValueError("INVALID_EVIDENCE_REQUIREMENTS")
         sid = identifier(step["id"])
         if sid in seen or step["adapter"] not in config["adapters"]:
             raise ValueError("DUPLICATE_STEP_OR_UNKNOWN_ADAPTER")
@@ -142,9 +167,34 @@ def lock_skill(skill):
 
 
 def bind_adapter(adapter):
+    from .adapters import ADAPTERS
     from .owners import Owner
 
+    if not isinstance(adapter, dict):
+        raise ValueError("INVALID_ADAPTER")
+    adapter = dict(adapter)
+    revision = adapter.pop("owner_revision", None)
+    if revision is not None and (
+        not isinstance(revision, str) or not re.fullmatch(r"[0-9a-f]{40}", revision)
+    ):
+        raise ValueError("EXACT_OWNER_REVISION_REQUIRED")
     kind = adapter.get("kind")
+    if kind not in ADAPTERS:
+        raise ValueError("UNREGISTERED_ADAPTER_KIND")
+    if kind in {"data", "report"}:
+        from .asset_owners import bind_asset
+
+        result = bind_asset(adapter)
+        if revision:
+            result["owner_revision"] = revision
+        return result
+    if kind == "native_session":
+        from .native_owner import bind_native
+
+        result = bind_native(adapter)
+        if revision:
+            result["owner_revision"] = revision
+        return result
     expected = (
         {"kind", "command", "request", "queue"}
         if kind == "runtime"
@@ -192,6 +242,8 @@ def bind_adapter(adapter):
         result["budgets"] = request.get("budgets", {})
     else:
         identifier(adapter["proposal_id"])
+    if revision:
+        result["owner_revision"] = revision
     return result
 
 
