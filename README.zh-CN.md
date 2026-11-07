@@ -17,22 +17,23 @@
 - 共用证据与恢复视图的本地实时只读 GUI、TUI 与回环地址 JSON API，可启用私有 Bearer 认证。
 - 数据/报告 Owner 校验、原始观测文件内容校验与历史原生会话检查。
 - 持久事件收件箱、本地通知 outbox、备份恢复、存储检查和调度迁移预检。
-- 显式证据门槛，以及工作流耗时、Owner 调用与操作者动作统计。
+- 证据范围与有效期准入、工程实验对比、只读变更影响预览。
+- 固定摘要的 Research 历史检索和轨迹评测，明确标注溯源限制。
 - GitHub Pages 响应式中英文演示，全部使用虚构数据，按钮只模拟状态变化。
 
-适用于 Linux、Python 3.12 以上，无运行时第三方依赖。初版为单机、单协调器架构，各领域 Owner 保持独立可运行；本次不修改生产定时任务。
+适用于 Linux、Python 3.12 以上，无运行时第三方依赖。采用单机、单协调器架构，各领域 Owner 保持独立可运行；本次不修改生产定时任务。
 
 ## 开始使用
 
 ```sh
 python -m pip install .
-quant-task --help
-quant-task --database "$TASK_DATABASE" tui --once
-quant-task --database "$TASK_DATABASE" serve-api --port 8787
+quant-task demo --output-root /absolute/external/demo-data --serve
 ```
 
-读取操作要求 `TASK_DATABASE` 已存在。创建合成验证环境见[安装与快速开始](docs/setup.md)。
+将输出目录替换为 checkout 外的实际目录，再打开 `http://127.0.0.1:8787/`。本地演示无需私有仓库、模型、凭证或网络，所有证据与历史记录均为合成数据。真实 Owner 和已有数据库配置见[安装说明](docs/setup.md)。
 
+- [证据适用性](docs/evidence-applicability.zh-CN.md)、[对比与影响预览](docs/insights.zh-CN.md)
+- [离线演示与轨迹评测](docs/public-demo.zh-CN.md)、[历史快照](docs/history.zh-CN.md)
 - [实时工作台](docs/live-workbench.md)与 [Owner 适配器](docs/owner-adapters.md)
 - [本轮验收与限制](docs/workbench-validation.md)
 - [架构与职责边界](docs/architecture.md)

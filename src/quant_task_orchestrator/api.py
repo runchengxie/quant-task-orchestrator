@@ -89,7 +89,7 @@ def handler_for(database, *, token=None):
             try:
                 limit = int(query.get("limit", ["100"])[0])
                 offset = int(query.get("offset", ["0"])[0])
-                after = int(query.get("after", ["0"])[0])
+                after = int(query.get("after", ["0"])[0]) if parts != ["v1", "compare"] else 0
                 tail = int(query["tail"][0]) if "tail" in query else None
                 if (
                     not 1 <= limit <= 1000
@@ -109,6 +109,70 @@ def handler_for(database, *, token=None):
                             "mode": "read_only",
                             "authentication_required": token is not None,
                         }
+                    elif parts == ["v1", "compare"]:
+                        from .insights import compare_workflows
+
+                        if set(query) != {"before", "after"} or any(
+                            len(x) != 1 for x in query.values()
+                        ):
+                            raise ValueError("INVALID_COMPARISON_QUERY")
+                        result = compare_workflows(store, query["before"][0], query["after"][0])
+                    elif parts == ["v1", "impact"]:
+                        from .insights import impact_preview
+
+                        if (
+                            set(query) != {"proposal"}
+                            or len(query["proposal"]) != 1
+                            or len(query["proposal"][0]) > 4096
+                        ):
+                            raise ValueError("INVALID_IMPACT_QUERY")
+
+                        def unique(pairs):
+                            value = {}
+                            for key, item in pairs:
+                                if key in value:
+                                    raise ValueError("DUPLICATE_PROPOSAL_FIELD")
+                                value[key] = item
+                            return value
+
+                        result = impact_preview(
+                            store, json.loads(query["proposal"][0], object_pairs_hook=unique)
+                        )
+                    elif parts == ["v1", "history"]:
+                        from .history import search_history
+
+                        allowed = {
+                            "q",
+                            "classification",
+                            "snapshot_sha256",
+                            "limit",
+                            "offset",
+                            "source_kind",
+                            "status",
+                            "stage",
+                            "decision",
+                            "evidence_stage",
+                            "topic_tags",
+                            "reason_codes",
+                            "revisit_conditions",
+                        }
+                        if set(query) - allowed or any(len(x) != 1 for x in query.values()):
+                            raise ValueError("INVALID_HISTORY_QUERY")
+                        values = {key: value[0] for key, value in query.items()}
+                        result = search_history(
+                            store,
+                            q=values.pop("q", ""),
+                            snapshot_sha256=values.pop("snapshot_sha256", None),
+                            limit=int(values.pop("limit", "50")),
+                            offset=int(values.pop("offset", "0")),
+                            **values,
+                        )
+                    elif parts == ["v1", "evaluations"]:
+                        from .analysis_reports import list_evaluations
+
+                        if set(query) - {"limit"} or any(len(x) != 1 for x in query.values()):
+                            raise ValueError("INVALID_EVALUATION_QUERY")
+                        result = list_evaluations(store, int(query.get("limit", ["25"])[0]))
                     elif parts == ["v1", "workflows"]:
                         result = {
                             "schema": "quant.workflow_list.v1",
@@ -131,8 +195,11 @@ def handler_for(database, *, token=None):
                     else:
                         return self.send_json(404, {"code": "NOT_FOUND"})
                 self.send_json(200, result)
-            except ValueError:
-                self.send_json(404, {"code": "WORKFLOW_UNAVAILABLE"})
+            except (ValueError, TypeError, RecursionError):
+                if len(parts) > 1 and parts[1] in {"compare", "impact", "history", "evaluations"}:
+                    self.send_json(400, {"code": "INSIGHTS_REQUEST_REJECTED"})
+                else:
+                    self.send_json(404, {"code": "WORKFLOW_UNAVAILABLE"})
             except (OSError, sqlite3.Error):
                 self.send_json(503, {"code": "DATABASE_UNAVAILABLE"})
 

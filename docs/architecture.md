@@ -1,59 +1,62 @@
 # Architecture
 
-One workflow connects existing owners without taking over their authoritative
-state. The initial release adds observation and bounded reconciliation, not a
-replacement research agent runtime.
+[简体中文](architecture.zh-CN.md)
+
+The coordinator records cross-owner workflow state and explicit approval. Runtime
+owns workers and result publication. Research owns admission, research decisions,
+independent review and promotion. Data and report owners retain their contracts.
 
 ```mermaid
 flowchart TD
   CLI[CLI / TUI] --> C[Workflow coordinator]
-  API[Read-only local query API] --> V[Allowlisted workflow projection]
-  C --> V
-  C --> S[(SQLite workflow / assignment / event ledger)]
-  C --> R[Runtime CLI: plan / submit / lookup / inspect / result / cancel]
-  C --> Q[Research campaign CLI: advance existing proposal / report]
-  R --> B[Owner-managed backtest workers and verified results]
-  Q --> E[Owner admission / PIT / budgets / independent review]
-  P[Static Pages demo] --> D[Fictional browser-local fixtures]
+  C --> S[(SQLite state and audit)]
+  C --> R[Runtime CLI]
+  C --> Q[Research campaign / bounded Codex owner]
+  C --> D[Data and report owners]
+  API[Loopback read-only API / GUI] --> V[Allowlisted views]
+  S --> V
+  V --> I[Comparison / history / impact / trace scores]
+  P[GitHub Pages] --> F[Synthetic browser fixtures]
 ```
 
-The coordinator persists dispatch intent before an external effect. A crash or
-lost response switches recovery to original-key lookup. It does not infer success
-from files, worker exit, an event or a model's text. DAG dependencies require a
-successful adapter outcome. Result integrity and economic evidence remain separate.
+The coordinator persists intent before dispatch. Lost responses reconcile the
+original owner identity rather than blindly resubmitting. Computation success,
+input integrity, historical PIT, execution semantics and research conclusions are
+separate evidence dimensions. Promotion remains unknown here.
 
-The Research adapter can reconcile an existing native Agent campaign, including
-one paused between sessions. It does not launch Codex/Hermes/DSH, choose a model,
-admit experiments, create conclusions or request promotion. Those require explicit
-owner tools and their budgets. `COMPLETED_UNVERIFIED` stays blocked here until an
-owner records its evidence decision. `DISCARDED` means the owner's process completed;
-it is never relabeled as a positive investment result.
+Bounded Codex lifecycle and tool-profile enforcement live in the Research Owner.
+V1 is tool-free; v2 explicitly binds four read-only MCP tools and their files.
+The coordinator can also observe completed pinned receipts without invoking a
+model. Campaign reconciliation operates only on existing approved proposals.
+No LLM router, mailbox team runtime or autonomous delegation is introduced.
 
-## References and implementation choices
+Evidence can carry owner scope and assessment validity. Requested data, strategy,
+universe, historical as-of and sample coverage must match before a scoped
+successor starts. Assessment freshness uses wall time, separately from market
+time. Expiry blocks new admission; it does not rewrite completed research history.
+Legacy unscoped workflows remain readable and do not gain scoped certification.
 
-[QuantStudio](https://github.com/quantskills/QuantStudio) motivates discoverable
-capabilities and a coherent view of work and artifacts.
-[DeepSeek's Super-agent prototype](https://github.com/deepseek-ai/dsh-superagent-prototype)
-motivates separating durable work items, execution assignments and event hints.
-These are architectural references. No source code from either repository was copied.
-The current coordinator uses deterministic routing to registered owners; it does
-not implement an LLM Router, mailbox team runtime or autonomous agent delegation.
+History snapshots and evaluation reports are additive, replaceable projections.
+Research history is imported only from explicit digest-pinned owner exports;
+operational failure is not negative economic evidence. Comparisons expose
+engineering identities and observed use, not unexported financial metrics or
+causal conclusions. Impact preview reads one consistent SQLite snapshot and
+executes nothing. Reference trace scores test a fixed harness, never model quality.
 
-## UI delivery
+The GUI, TUI and API share safe projections. The API binds loopback, optionally
+requires a private bearer token and rejects HTTP writes. Queries never invoke
+owners. English/Chinese UI catalogs separate human labels from stable contracts.
+GitHub Pages remains synthetic; the installed offline demo uses a public protocol
+peer and external data directory, with no private package or model dependency.
 
-The live terminal UI consumes `quant.workflow_view.v1`, also returned by the
-loopback API. The Pages demo illustrates a future browser workbench, including
-data/PIT/review stages beyond the two executable adapter kinds in v0.1. Its
-fictional Skill revision labels are not installable catalog entries. It never
-connects to the loopback API, loads owner configuration or publishes private state.
-A same-origin local read-only GUI now consumes the real API, with bundled assets
-and independent evidence/recovery panels. It is separate from the synthetic Pages
-demo. Authenticated remote deployment remains a subsequent release. See
-[the workbench](live-workbench.md) and [owner adapters](owner-adapters.md).
+The implementation is single-machine, one scheduler per database. It supervises
+trusted owner CLIs; it is not an operating-system sandbox. Real deployments must
+provide suitable process identities and isolation. Restore, local notification
+reconciliation and migration preflight do not switch production schedules or send
+external messages. A separately installed private read-only workbench is not
+production scheduler adoption.
 
-## Scope boundaries
-
-No matching, strategy construction, raw data ownership, production cron migration,
-live trading or distributed leases. The service runs trusted owner CLIs under the
-operator's identity. It is not a sandbox. Separate OS identities or isolation must
-be provided by deployment when required. No production service is installed here.
+QuantStudio and DeepSeek Super-agent informed capability discovery and durable
+work-item separation. Their source code is not copied into this repository.
+See [owner adapters](owner-adapters.md), [evidence](evidence-applicability.md),
+[insights](insights.md) and [research integration](research-closure.md).

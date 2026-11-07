@@ -67,6 +67,32 @@
         class="live-metrics"
         aria-label="Operational metrics"
       ></section>
+      <details class="live-panel live-insights" id="insights">
+        <summary data-i18n="insights">Evidence and history insights</summary>
+        <p data-i18n="insightsReadOnly">Read-only comparisons and recorded evidence. No execution or approval.</p>
+        <datalist id="workflow-options"></datalist>
+        <section><h2 data-i18n="compareTitle">Compare workflows</h2>
+          <div class="insight-controls"><label><span data-i18n="beforeWorkflow">Before workflow</span><input id="compare-before" list="workflow-options" autocomplete="off"></label>
+          <label><span data-i18n="afterWorkflow">After workflow</span><input id="compare-after" list="workflow-options" autocomplete="off"></label>
+          <button id="compare-load" data-i18n="compareLoad">Compare</button></div>
+          <div id="compare-result" aria-live="polite"></div></section>
+        <section><h2 data-i18n="historyTitle">Research history</h2>
+          <div class="insight-controls"><label><span data-i18n="historySearch">Search retained history</span><input id="history-query" type="search" maxlength="256"></label>
+          <label><span data-i18n="classification">Classification</span><select id="history-classification"><option value="" data-i18n="allClassifications">All classifications</option><option value="research_conclusion" data-i18n="research_conclusion">Research conclusion</option><option value="operational_failure" data-i18n="operational_failure">Operational failure</option><option value="unclassified" data-i18n="unclassified">Unclassified</option></select></label>
+          <button id="history-load" data-i18n="historyLoad">Search history</button></div>
+          <div id="history-result" aria-live="polite"></div>
+          <button id="history-next" hidden data-i18n="nextPage">Next page</button></section>
+        <section><h2 data-i18n="impactTitle">Preview change impact</h2>
+          <div class="insight-controls"><label><span data-i18n="changeKind">Change kind</span><select id="impact-kind"><option value="owner_revision" data-i18n="ownerRevision">Owner revision</option><option value="skill_revision" data-i18n="skillRevision">Skill revision</option><option value="pinned_input" data-i18n="pinnedInput">Pinned input</option></select></label>
+          <label><span data-i18n="previousPin">Previous hash</span><input id="impact-previous" maxlength="64"></label>
+          <label><span data-i18n="nextPin">Next hash</span><input id="impact-next" maxlength="64"></label>
+          <label><span data-i18n="optionalTarget">Target (optional)</span><input id="impact-target" maxlength="128"></label>
+          <button id="impact-load" data-i18n="impactLoad">Preview</button></div>
+          <div id="impact-result" aria-live="polite"></div></section>
+        <section><h2 data-i18n="evaluationTitle">Recorded tool-trace evaluations</h2>
+          <button id="evaluation-load" data-i18n="evaluationLoad">Load evaluations</button>
+          <div id="evaluation-result" aria-live="polite"></div></section>
+      </details>
       <div class="live-columns">
         <section class="live-panel live-workflows">
           <h2 data-i18n="workflows">Workflows</h2>

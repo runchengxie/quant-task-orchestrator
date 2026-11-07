@@ -219,6 +219,30 @@ def main(argv=None):
     api.add_argument("--host", default="127.0.0.1")
     api.add_argument("--port", type=int, default=8787)
     api.add_argument("--token-file", type=Path)
+    demo = commands.add_parser("demo", help="Create an entirely synthetic offline workbench")
+    demo.add_argument("--output-root", required=True, type=Path)
+    demo.add_argument("--serve", action="store_true")
+    demo.add_argument("--port", type=int, default=8787)
+    comparison = commands.add_parser("compare")
+    comparison.add_argument("before_id")
+    comparison.add_argument("after_id")
+    impact = commands.add_parser("impact")
+    impact.add_argument("--proposal", required=True, type=Path)
+    history_import = commands.add_parser("history-import")
+    history_import.add_argument("--file", required=True, type=Path)
+    history_import.add_argument("--sha256", required=True)
+    history = commands.add_parser("history")
+    history.add_argument("--q", default="")
+    history.add_argument("--classification")
+    history.add_argument("--snapshot-sha256")
+    history.add_argument("--limit", type=int, default=50)
+    history.add_argument("--offset", type=int, default=0)
+    evaluation = commands.add_parser("eval-trace")
+    evaluation_input = evaluation.add_mutually_exclusive_group(required=True)
+    evaluation_input.add_argument("--trace", type=Path)
+    evaluation_input.add_argument("--reference", action="store_true")
+    evaluation.add_argument("--output", type=Path)
+    commands.add_parser("evaluations")
     _operations_parsers(commands)
     args = parser.parse_args(argv)
     try:
@@ -237,6 +261,36 @@ def main(argv=None):
             "health",
         }:
             result = _independent_operation(args)
+        elif args.command == "demo":
+            from .demo import run_demo
+
+            result = run_demo(args.output_root)
+            if args.serve:
+                from .api import serve
+
+                print(
+                    json.dumps(
+                        {**result, "url": f"http://127.0.0.1:{args.port}/"}, allow_nan=False
+                    ),
+                    flush=True,
+                )
+                serve(Path(result["database_path"]), port=args.port)
+                return 0
+        elif args.command == "eval-trace":
+            from .evaluation import evaluate_trace, reference_trace
+
+            trace = reference_trace() if args.reference else read_json(args.trace)
+            if args.database:
+                from .analysis_reports import record_evaluation
+
+                with Store(args.database) as store:
+                    result = record_evaluation(store, trace)
+            else:
+                result = evaluate_trace(trace)
+            if args.output:
+                with args.output.open("x") as output:
+                    json.dump(result, output, allow_nan=False, indent=2)
+                args.output.chmod(0o600)
         elif args.command == "capabilities":
             from .adapters import adapter_catalog
 
@@ -297,9 +351,41 @@ def main(argv=None):
                 "metrics",
                 "recovery",
                 "outbox-enqueue",
+                "compare",
+                "impact",
+                "history",
+                "evaluations",
             }
             with Store(args.database, readonly=readonly) as store:
-                if args.command == "submit":
+                if args.command == "compare":
+                    from .insights import compare_workflows
+
+                    result = compare_workflows(store, args.before_id, args.after_id)
+                elif args.command == "impact":
+                    from .insights import impact_preview
+
+                    result = impact_preview(store, read_json(args.proposal))
+                elif args.command == "history-import":
+                    from .history import install_history
+
+                    result = install_history(store, args.file, args.sha256)
+                elif args.command == "history":
+                    from .history import search_history
+
+                    filters = {"classification": args.classification} if args.classification else {}
+                    result = search_history(
+                        store,
+                        snapshot_sha256=args.snapshot_sha256,
+                        q=args.q,
+                        limit=args.limit,
+                        offset=args.offset,
+                        **filters,
+                    )
+                elif args.command == "evaluations":
+                    from .analysis_reports import list_evaluations
+
+                    result = list_evaluations(store)
+                elif args.command == "submit":
                     plan = read_json(args.plan)
                     verify_bindings(plan)
                     result = store.submit(plan)

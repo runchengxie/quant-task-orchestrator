@@ -78,3 +78,20 @@ status codes. Raw owner payloads, commands, paths and reproduction locators stay
 private. `freshness=last_observed_owner_state` and per-step timestamps distinguish
 cached projections from current owner truth. Both `research_validated` and
 `promotion_authorized` stay false; consult owner evidence for research decisions.
+
+## Applicability and insight queries
+
+A step can add typed `evidence_context`; Owner evidence can carry typed `scope`,
+`assessed_at` and `valid_until`. See [evidence applicability](evidence-applicability.md)
+for the distinction between market time, current validity and legacy checks.
+
+| Route | Contract |
+| --- | --- |
+| `GET /v1/compare?before=ID&after=ID` | `quant.workflow_comparison.v1`; engineering identities only |
+| `GET /v1/impact?proposal=JSON` | `quant.change_impact.v1`; consistent snapshot, no execution |
+| `GET /v1/history?q=TEXT&snapshot_sha256=SHA` | `quant.research_history.v1`; pinned projection search |
+| `GET /v1/evaluations` | `quant.evaluation_list.v1`; fixed trace checks, unverified provenance |
+
+These queries share existing authentication and remain read-only. History import
+and trace recording are explicit local CLI operations. Cache integrity does not
+confer owner authority or turn trace scores into model evaluation.

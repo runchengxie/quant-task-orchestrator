@@ -4,6 +4,7 @@ import fcntl
 from contextlib import contextmanager
 
 from .contracts import verify_bindings
+from .evidence_scope import assess_check
 from .owners import Owner, OwnerError
 from .store import TERMINAL
 
@@ -80,7 +81,11 @@ class Scheduler:
                     ):
                         dependencies = {item["id"]: item for item in self.store.view(wid)["steps"]}
                         if any(
-                            dependencies[dep]["evidence"]["checks"][name]["status"] != "verified"
+                            not assess_check(
+                                dependencies[dep]["evidence"]["checks"][name],
+                                definition.get("evidence_context"),
+                                dimension=name,
+                            )["usable"]
                             for dep, checks in definition.get("requires_evidence", {}).items()
                             for name in checks
                         ):
