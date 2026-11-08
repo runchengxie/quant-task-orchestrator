@@ -32,11 +32,11 @@
           ><span>▦</span><span data-i18n="workflows">Workflows</span
           ><span class="nav-count">03</span></a
         ><a class="nav-item" href="#owners"
-          ><span>◈</span><span data-i18n="owners">Domain owners</span></a
+          ><span>◈</span><span data-i18n="owners">Responsible systems</span></a
         ><a class="nav-item" href="#skills"
-          ><span>⌘</span><span data-i18n="skills">Skill catalog</span></a
+          ><span>⌘</span><span data-i18n="skills">Capability library</span></a
         ><a class="nav-item" href="#activity"
-          ><span>◷</span><span data-i18n="activity">Event ledger</span></a
+          ><span>◷</span><span data-i18n="activity">Workflow timeline</span></a
         >
       </nav>
       <div class="sidebar-note">
@@ -187,18 +187,20 @@
         <section class="bottom-grid">
           <article id="activity" class="panel ledger">
             <div class="panel-heading">
-              <h2 data-i18n="recentEvents">Event ledger</h2>
+              <h2 data-i18n="recentEvents">Workflow timeline</h2>
               <span class="subtle-tag" data-i18n="durableHints"
                 >Durable hints · owner verified</span
               >
             </div>
+            <p class="owner-footnote" data-i18n="timelineHelp"></p>
             <div id="events"></div>
           </article>
           <article id="owners" class="panel owner-panel">
             <div class="panel-heading">
-              <h2 data-i18n="ownership">Clear ownership</h2>
+              <h2 data-i18n="ownership">Responsible systems</h2>
               <span>◈</span>
             </div>
+            <p class="owner-footnote" data-i18n="ownersHelp"></p>
             <div class="owner">
               <span class="owner-icon">O</span>
               <div>
@@ -244,20 +246,21 @@
                 VERSION-LOCKED CAPABILITIES
               </div>
               <h2 data-i18n="skillTitle">
-                Same workflow. Same skill revision.
+                Capability library
               </h2>
             </div>
             <span class="subtle-tag" data-i18n="syntheticLocks"
               >Illustrative locks</span
             >
           </div>
+          <p class="owner-footnote" data-i18n="skillsHelp"></p>
           <div id="skill-list" class="skill-list"></div>
         </section>
         </details>
         <footer>
           <span
             ><span class="footer-dot"></span>quant-task-orchestrator
-            <span class="mono">/ v0.5.1</span></span
+            <span class="mono">/ v0.6.0</span></span
           ><span data-i18n="footer"
             >Built for reproducible research. Designed around explicit
             boundaries.</span

@@ -31,6 +31,10 @@ def main():
             page.on("pageerror", lambda error: errors.append(str(error)))
             page.goto(f"http://127.0.0.1:{server.server_port}", wait_until="networkidle")
             assert page.locator(".workflow-row").count() == 3
+            assert page.locator('[data-i18n="owners"]').inner_text() == "Responsible systems"
+            assert page.locator('[data-i18n="skills"]').inner_text() == "Capability library"
+            assert page.locator('[data-i18n="activity"]').inner_text() == "Workflow timeline"
+            assert "does not install" in page.locator('[data-i18n="skillsHelp"]').text_content()
             summary = page.locator("#workflow-summary")
             assert "3 of 6 steps complete" in summary.inner_text()
             assert "Request historical availability evidence" in summary.inner_text()
@@ -47,6 +51,9 @@ def main():
             page.locator("#language").click()
             assert page.locator("html").get_attribute("lang") == "zh-CN"
             assert "六个步骤均已完成" in summary.inner_text()
+            assert page.locator('[data-i18n="owners"]').inner_text() == "负责系统"
+            assert page.locator('[data-i18n="skills"]').inner_text() == "能力库"
+            assert page.locator('[data-i18n="activity"]').inner_text() == "流程时间线"
             page.reload(wait_until="networkidle")
             assert page.locator("html").get_attribute("lang") == "zh-CN"
             page.locator("#language").click()

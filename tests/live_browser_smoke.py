@@ -34,11 +34,12 @@ def fixture_smoke():
             {"id": "data", "status": "succeeded", "owner_id": "data-owner", "depends_on": []},
             {
                 "id": "review",
+                "kind": "research",
                 "status": "blocked",
                 "owner_id": "research-owner",
                 "depends_on": ["data"],
                 "evidence": {
-                    "checks": {"input_integrity": {"status": "verified", "source": "data-owner"}}
+                    "checks": {"input_integrity": {"status": "verified", "source": "data-owner"}, "historical_pit": {"status": "missing"}, "independent_review": {"status": "not_applicable"}}
                 },
                 "recovery": {
                     "code": "pit_missing",
@@ -95,7 +96,8 @@ def fixture_smoke():
                             "type": "step_blocked",
                             "step_id": "review",
                             "created": "2026-11-07T00:01:00Z",
-                        }
+                        },
+                        {"seq": 2, "type": "future.event_code", "step_id": "review", "created": "2026-11-07T00:02:00Z"}
                     ]
                 }
             else:
@@ -137,11 +139,39 @@ def fixture_smoke():
             expect(page.locator("#workflow-technical")).to_have_attribute("open", "")
             assert page.locator("#detail img").count() == 0
             assert page.locator(".live-layer").count() == 2
-            page.locator(".live-step").nth(1).click()
+            expect(page.locator(".live-next-action")).to_contain_text("Responsible system: Research")
+            expect(page.locator(".live-next-action")).to_contain_text("Recorded missing evidence: Historical point-in-time")
+            expect(page.locator(".live-next-action")).to_contain_text("Recorded evidence not applicable: Independent review")
+            # Do not infer absent dimensions to be missing.
+            assert "Economic conclusion" not in page.locator(".live-next-action").inner_text()
+            page.locator(".live-step").nth(0).click()
+            page.locator("#inspect-next-step").click()
+            expect(page.locator(".live-step").nth(1)).to_have_attribute("aria-pressed", "true")
+            assert page.evaluate("document.activeElement.id") == "step-evidence"
+            page.wait_for_function("document.getElementById('step-evidence').getBoundingClientRect().top >= 0 && document.getElementById('step-evidence').getBoundingClientRect().top < 50")
+            page.locator("#event-history > summary").click()
+            expect(page.locator(".live-events")).to_contain_text("Step is blocked")
+            expect(page.locator(".live-events")).to_contain_text("Recorded workflow event")
+            unknown_event = page.locator(".live-events li").first
+            assert "future.event_code" not in unknown_event.inner_text()
+            unknown_event.locator("summary").click()
+            expect(unknown_event).to_contain_text("future.event_code")
             expect(page.locator("#detail")).to_contain_text(
                 "Collect historical point-in-time evidence"
             )
             expect(page.locator(".live-check")).to_have_count(6)
+            # Every registered kind identifies its owning system, not its execution ID.
+            for kind, label in [
+                ("raw_observation", "Market Data"), ("data", "Market Data"),
+                ("codex_task", "Research"), ("native_session", "Research"),
+                ("research_snapshot", "Research"), ("runtime", "Backtest Runtime"),
+                ("report", "Reports"), ("future_adapter", "Unknown"),
+            ]:
+                workflow["steps"][1]["kind"] = kind
+                page.locator("#refresh").click()
+                expect(page.locator(".live-next-action")).to_contain_text(f"Responsible system: {label}")
+                assert "research-owner" not in page.locator(".live-next-action").inner_text()
+            workflow["steps"][1]["kind"] = "research"
             # Approval blockers have WAITING steps; guidance must still be prominent.
             workflow["steps"][1]["status"] = "waiting"
             workflow["steps"][1]["recovery"] = {
@@ -160,6 +190,9 @@ def fixture_smoke():
             expect(page.locator(".live-workflow")).to_have_count(0)
             page.locator("#search").fill("")
             page.locator("#language").select_option("zh-CN")
+            expect(page.locator("#event-history > summary")).to_have_text("流程时间线")
+            expect(page.locator("#inspect-next-step")).to_have_text("查看步骤证据与恢复建议")
+            expect(page.locator(".live-next-action")).to_contain_text("负责系统: Research 研究系统")
             page.reload()
             expect(page.locator("html")).to_have_attribute("lang", "zh-CN")
             page.locator("#language").select_option("en")

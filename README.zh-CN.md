@@ -32,6 +32,8 @@ quant-task demo --output-root /absolute/external/demo-data --serve
 
 将输出目录替换为 checkout 外的实际目录，再打开 `http://127.0.0.1:8787/`。本地演示无需私有仓库、模型、凭证或网络，所有证据与历史记录均为合成数据。真实 Owner 和已有数据库配置见[安装说明](docs/setup.md)。
 
+- [工作台概念](docs/workflow-concepts.zh-CN.md)
+- [金融结果声明](docs/economic-results.zh-CN.md)、[影子观测](docs/shadow-observations.zh-CN.md)
 - [证据适用性](docs/evidence-applicability.zh-CN.md)、[对比与影响预览](docs/insights.zh-CN.md)
 - [离线演示与轨迹评测](docs/public-demo.zh-CN.md)、[历史快照](docs/history.zh-CN.md)
 - [实时工作台](docs/live-workbench.md)与 [Owner 适配器](docs/owner-adapters.md)

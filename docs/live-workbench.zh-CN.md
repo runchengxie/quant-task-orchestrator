@@ -39,3 +39,5 @@ quant-task --database "$TASK_DATABASE" serve-api --host 127.0.0.1 --port 8787
 - `GET /v1/metrics`：整个数据库的计量，不受流程列表分页影响。
 
 只读接口打开现有数据库，不执行迁移或调用负责方。可写协调操作会添加辅助表，旧记录仍可读取；最终状态和校验后的观测在同一事务中提交。升级保留状态前应通过 SQLite backup API 备份。
+
+界面术语和只读证据导航见[工作台概念](workflow-concepts.zh-CN.md)。

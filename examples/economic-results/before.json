@@ -1,0 +1,32 @@
+{
+  "schema": "quant.economic_result.v1",
+  "owner": "quant-research",
+  "source_revision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "result_id": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+  "report_sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+  "evidence_class": "synthetic",
+  "execution_status": "succeeded",
+  "admission_status": "blocked",
+  "basis": {
+    "data_sha256": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+    "universe_sha256": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+    "benchmark_sha256": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+    "cost_model_sha256": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+    "execution_semantics_sha256": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+    "metric_definitions_sha256": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+    "sample_start": "2025-01-01",
+    "sample_end": "2025-12-31",
+    "time_zone": "UTC",
+    "currency": "USD",
+    "return_frequency": "daily",
+    "history_visibility": "seen"
+  },
+  "metrics": {
+    "total_return": 0.1,
+    "annualized_return": 0.1,
+    "max_drawdown": 0.05,
+    "annualized_volatility": 0.15,
+    "sharpe": 0.7,
+    "turnover": 1.2
+  }
+}
