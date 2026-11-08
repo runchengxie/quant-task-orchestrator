@@ -16,6 +16,10 @@
     if (cls) e.className = cls;
     return e;
   };
+  let workflowGroup = "all";
+  const attentionStates = new Set(["blocked", "failed", "unknown", "needs_reconciliation", "awaiting_approval"]);
+  const runningStates = new Set(["active", "running", "dispatching", "cancelling"]);
+  const groupMatches = (w, group) => group === "all" || (group === "attention" ? attentionStates.has(String(w.status).toLowerCase()) : group === "running" ? runningStates.has(String(w.status).toLowerCase()) : String(w.status).toLowerCase() === "succeeded");
   let token="", authenticationRequired=false, authEpoch=0;
   let workflows = [],
     total = 0,
@@ -107,7 +111,7 @@
       filter = $("status").value,
       items = workflows.filter(
         (w) =>
-          (!filter || w.status === filter) &&
+          (!filter || w.status === filter) && groupMatches(w, workflowGroup) &&
           `${w.title} ${w.workflow_id}`.toLocaleLowerCase(lang).includes(q),
       );
     $("workflows").replaceChildren();
@@ -117,10 +121,11 @@
       b.setAttribute("aria-pressed", String(w.workflow_id === selected));
       b.append(
         node("strong", w.title || w.workflow_id),
-        node("small", w.workflow_id),
+        node("small", time(w.updated_at)),
         badge(w.status),
       );
       b.onclick = () => {
+        expandedPanels.clear();
         selected = w.workflow_id;
         stepId = null;
         view = null;
@@ -135,6 +140,23 @@
         node("p", t(workflows.length ? "noMatch" : "empty"), "live-muted"),
       );
     $("more").hidden = workflows.length >= total;
+  }
+  function renderOverview() {
+    const root = $("overview"); root.replaceChildren();
+    root.append(node("p", `${t("loadedWorkflows")}: ${workflows.length} / ${total}`, "live-overview-scope"));
+    [["attention","needsAttention"],["running","inProgress"],["completed","executionComplete"]].forEach(([group,key]) => {
+      const b=node("button",undefined,"live-summary-card"); b.type="button";b.dataset.group=group;
+      b.setAttribute("aria-pressed",String(workflowGroup===group));
+      b.append(node("span",t(key)),node("strong",workflows.filter(w=>groupMatches(w,group)).length));
+      b.onclick=()=>{workflowGroup=workflowGroup===group?"all":group;renderOverview();renderList();};root.append(b);
+    });
+    root.append(node("p",t("executionNotQualification"),"live-overview-scope"));
+  }
+  const expandedPanels=new Set();
+  function disclosure(id,title,child) {
+    const d=node("details",undefined,"live-panel live-disclosure");d.id=id;d.open=expandedPanels.has(id);
+    d.append(node("summary",title),child);
+    return d;
   }
   function renderMetrics() {
     $("metrics").replaceChildren();
@@ -164,23 +186,22 @@
     }
     if (detailError)
       root.append(node("p", t("unavailable"), "live-health outage"));
-    const p = panel(view.title || view.workflow_id);
-    p.append(
-      badge(view.status),
-      facts([
-        ["plan", unknown(view.plan_sha256)],
-        ["approved", value(view.approved)],
-        ["research", value(view.research_validated)],
-        ["promotion", value(view.promotion_authorized)],
-        ["created", time(view.created_at)],
-        ["updated", time(view.updated_at)],
-        ["freshness", view.freshness ? t(view.freshness) : t("unknown")],
-      ]),
-    );
-    root.append(p);
     const steps = Array.isArray(view.steps) ? view.steps : [],
-      graph = panel(t("dependencies")),
-      layers = node("div", undefined, "live-graph");
+      p = panel(view.title || view.workflow_id),
+      urgent = steps.find(s=>attentionStates.has(String(s.status).toLowerCase()) || String(s.status).toLowerCase() === "dispatching") || steps.find(s=>s.recovery?.requires_operator === true),
+      outcome=node("div",undefined,"live-outcome");
+    outcome.append(node("p",`${t("executionState")}: ${t(String(view.status).toLowerCase())}`),
+      node("p",`${t("researchQualification")}: ${value(view.research_validated)}`));
+    p.append(outcome,node("p",t("executionNotQualification"),"live-muted"));
+    if(urgent) {
+      const callout=node("div",undefined,"live-next-action");
+      callout.append(node("strong",`${t("needsAttention")}: ${urgent.id}`),node("p",`${t("code")}: ${unknown(urgent.recovery?.code || urgent.error_code)}`));
+      const actions=urgent.recovery?.actions||[];
+      callout.append(node("p",`${t("nextStep")}: ${actions.length?actions.map(t).join(" · "):t("inspectOwnerEvidence")}`));p.append(callout);
+    }
+    const technical=facts([["workflowId",unknown(view.workflow_id)],["plan",unknown(view.plan_sha256)],["approved",value(view.approved)],["promotion",value(view.promotion_authorized)],["created",time(view.created_at)],["updated",time(view.updated_at)],["freshness",view.freshness?t(view.freshness):t("unknown")]]);
+    root.append(p,disclosure("workflow-technical",t("technicalDetails"),technical));
+    const graph = panel(t("dependencies")), layers = node("div", undefined, "live-graph");
     let remaining = [...steps],
       done = new Set(),
       i = 0;
@@ -199,7 +220,7 @@
         b.type = "button";
         b.setAttribute(
           "aria-pressed",
-          String(s.id === (stepId || steps[0]?.id)),
+          String(s.id === (stepId || urgent?.id || steps[0]?.id)),
         );
         b.append(
           node("strong", s.id),
@@ -222,7 +243,7 @@
     }
     graph.append(layers);
     root.append(graph);
-    const s = steps.find((s) => s.id === stepId) || steps[0];
+    const s = steps.find((s) => s.id === stepId) || urgent || steps[0];
     if (s) {
       const info = panel(s.id);
       info.append(
@@ -244,7 +265,7 @@
           ["cumulativeTokens", value(s.execution.cumulative_tokens)],
         ]));
       }
-      root.append(info);
+      root.append(disclosure("step-technical",t("runDetails"),info));
       const evidence = panel(t("evidence")),
         grid = node("div", undefined, "live-evidence");
       [
@@ -264,8 +285,7 @@
           node("p",`${t("source")}: ${unknown(c.source)}`),
           node("p",`${t("applicability")}: ${applicability ? t(applicability.code) : t("applicabilityUnknown")}`,applicability?.usable===true?"live-muted":"insight-warning"),
           node("p",t(applicability?.usable===true?"usable":"notUsable")),
-          facts([["marketAsOf",time(c.scope?.as_of)],["assessedAt",time(c.assessed_at)],["validUntil",time(c.valid_until)]]),
-          fingerprintDetails([["digest",unknown(c.evidence_sha256)],["dataHash",unknown(c.scope?.data_sha256)],["strategyHash",unknown(c.scope?.strategy_sha256)],["universeHash",unknown(c.scope?.universe_sha256)],["sampleStart",unknown(c.scope?.sample_start)],["sampleEnd",unknown(c.scope?.sample_end)]]));
+          fingerprintDetails([["marketAsOf",time(c.scope?.as_of)],["assessedAt",time(c.assessed_at)],["validUntil",time(c.valid_until)],["digest",unknown(c.evidence_sha256)],["dataHash",unknown(c.scope?.data_sha256)],["strategyHash",unknown(c.scope?.strategy_sha256)],["universeHash",unknown(c.scope?.universe_sha256)],["sampleStart",unknown(c.scope?.sample_start)],["sampleEnd",unknown(c.scope?.sample_end)]]));
         grid.append(e);
       });
       evidence.append(grid);
@@ -299,7 +319,7 @@
       );
     if (!events.length) ep.append(node("p", t("noEvents"), "live-muted"));
     ep.append(list);
-    root.append(ep);
+    root.append(disclosure("event-history",t("events"),ep));
   }
   const insightState = {compare:null, history:null, impact:null, evaluation:null};
   const insightStatus = {}, insightSequence = {};
@@ -406,6 +426,7 @@
       : t("outage");
     $("health").classList.toggle("outage", !healthy);
     $("setup").hidden = healthy;
+    renderOverview();
     renderMetrics();
     renderList();
     renderDetail();
@@ -479,8 +500,13 @@
       }
     }
   }
+  document.addEventListener("toggle",e=>{
+    if(e.target.matches?.("#detail details[id]")) {
+      if(e.target.open) expandedPanels.add(e.target.id); else expandedPanels.delete(e.target.id);
+    }
+  },true);
   $("connect").onclick = () => {authEpoch++;busy=false;clearInsights();token=$("token").value.trim(); $("token").value=""; poll();};
-  $("disconnect").onclick = () => {authEpoch++;busy=false;clearInsights();token=""; $("token").value="";workflows=[];total=0;metrics=null;view=null;events=[];selected=null;healthy=false;authenticationRequired=true;render();poll();};
+  $("disconnect").onclick = () => {authEpoch++;busy=false;clearInsights();expandedPanels.clear();workflowGroup="all";token=""; $("token").value="";workflows=[];total=0;metrics=null;view=null;events=[];selected=null;healthy=false;authenticationRequired=true;render();poll();};
   $("refresh").onclick = () => poll();
   $("more").onclick = () => poll(true);
   $("search").oninput = renderList;
