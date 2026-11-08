@@ -125,7 +125,7 @@
         badge(w.status),
       );
       b.onclick = () => {
-        expandedPanels.clear();
+        expandedPanels.clear();insightSequence.recheck=(insightSequence.recheck||0)+1;insightState.recheck=null;delete insightStatus.recheck;
         selected = w.workflow_id;
         stepId = null;
         view = null;
@@ -218,7 +218,10 @@
       });
       const inspect=node("button",t("inspectStep"));inspect.type="button";inspect.id="inspect-next-step";
       inspect.onclick=()=>{stepId=urgent.id;renderDetail();const target=$("step-evidence");target?.scrollIntoView({block:"start",behavior:"instant"});target?.focus({preventScroll:true});};
-      callout.append(inspect);p.append(callout);
+      const recheck=node("button",t("recheckLoad"));recheck.type="button";recheck.id="recheck-load";
+      recheck.onclick=()=>loadInsight("recheck","/v1/workflows/"+encodeURIComponent(view.workflow_id)+"/recheck","quant.workflow_recheck.v1");
+      const recheckResult=node("div");recheckResult.id="recheck-result";
+      callout.append(node("p",t("blockerRecheck")),inspect,recheck,recheckResult);p.append(callout);
     }
     const technical=facts([["workflowId",unknown(view.workflow_id)],["plan",unknown(view.plan_sha256)],["approved",value(view.approved)],["promotion",value(view.promotion_authorized)],["created",time(view.created_at)],["updated",time(view.updated_at)],["freshness",view.freshness?t(view.freshness):t("unknown")]]);
     root.append(p,disclosure("workflow-technical",t("technicalDetails"),technical));
@@ -324,7 +327,7 @@
       const ul = node("ul");
       (s.recovery?.actions || []).forEach((a) => ul.append(node("li", t(a))));
       if (!ul.children.length) ul.append(node("li", t("unknown")));
-      recovery.append(ul);
+      recovery.append(node("p",t("blockerRecheck")),ul);
       root.append(recovery);
     }
     const ep = panel(t("events")),
@@ -339,13 +342,14 @@
     ep.append(list);
     root.append(disclosure("event-history",t("events"),ep));
   }
-  const insightState = {compare:null, history:null, impact:null, evaluation:null};
+  const insightState = {compare:null, history:null, impact:null, evaluation:null, economicList:null, economic:null, recheck:null};
   const insightStatus = {}, insightSequence = {};
   let historyOffset = 0;
   function clearInsights() {
     Object.keys(insightState).forEach(k => {insightState[k]=null; delete insightStatus[k]; insightSequence[k]=(insightSequence[k]||0)+1;});
     historyOffset=0;
     ["compare-before","compare-after","history-query","impact-previous","impact-next","impact-target"].forEach(id => $(id).value="");
+    $("economic-before").replaceChildren();$("economic-after").replaceChildren();
     $("history-classification").value="";
     $("impact-kind").value="owner_revision";
     $("insights").open=false;
@@ -360,15 +364,61 @@
   function fingerprintDetails(pairs) {
     const detail=node("details"); detail.append(node("summary",t("scopeDetails")), facts(pairs)); return detail;
   }
+  const economicMetrics=["total_return","annualized_return","max_drawdown","annualized_volatility","sharpe","turnover"];
+  function economicNumber(v) {
+    return typeof v === "number" && Number.isFinite(v) ? new Intl.NumberFormat(lang,{maximumFractionDigits:6}).format(v) : t("unknown");
+  }
+  function renderEconomicOptions() {
+    ["economic-before","economic-after"].forEach(id=>{
+      const select=$(id), previous=select.value;
+      const placeholder=node("option",t("economicSelect"));placeholder.value="";select.replaceChildren(placeholder);
+      (insightState.economicList?.results||[]).forEach(item=>{
+        const option=node("option",`${String(item.result?.result_id||"").slice(0,12)} · ${t(item.result?.evidence_class||"unknown")} · ${String(item.snapshot_sha256||"").slice(0,8)}`);
+        option.value=item.snapshot_sha256;select.append(option);
+      });
+      select.value=previous;
+    });
+  }
   function renderInsights() {
     const options=$("workflow-options"); options.replaceChildren();
     workflows.forEach(w=>{const option=node("option",w.title||w.workflow_id);option.value=w.workflow_id;options.append(option);});
+    renderEconomicOptions();
+    $("economicList-more").hidden=insightState.economicList?.next_offset==null;
+    $("economicList-more").disabled=insightStatus.economicList==="insightLoading";
     Object.keys(insightState).forEach(k=>{
-      const root=$(k+"-result"), data=insightState[k]; root.replaceChildren();
+      const root=$(k+"-result"), data=insightState[k]; if(!root) return;root.replaceChildren();
       if(insightStatus[k]) root.append(node("p",t(insightStatus[k]),"live-muted"));
-      $(k+"-load").disabled=insightStatus[k]==="insightLoading";
+      $(k+"-load").disabled=k!=="economicList" && insightStatus[k]==="insightLoading";
+      if(k==="economic") $("economic-load").disabled=insightStatus[k]==="insightLoading" || !$("economic-before").value || !$("economic-after").value;
       if(!data) return;
-      if(k==="compare") {
+      if(k==="recheck") {
+        if(data.workflow_id!==view?.workflow_id) return;
+        root.append(node("p",t("recheckScope")),facts([["requirementsChecked",unknown(data.requirements_checked)],["requirementsMet",value(data.requirements_met)],["newPlanRequired",value(data.new_plan_required)],["approvalRequired",value(data.approval_required)]]));
+        root.append(table(["steps","upstreamStep","evidence","source","status","applicability"],(data.blockers||[]).map(b=>[b.step_id,b.upstream_step_id,t(b.dimension),b.source,t(b.status),t(b.applicability_code)])));
+      } else if(k==="economicList") {
+        root.append(node("p",`${t("economicLoaded")}: ${(data.results||[]).length} / ${unknown(data.total)}`,"live-muted"));
+        if(!data.results?.length) root.append(node("p",t("economicEmpty")));
+        (data.results||[]).forEach(item=>{
+          const result=item.result||{}, detail=node("details");
+          detail.append(node("summary",`${String(result.result_id||"").slice(0,12)} · ${t(result.evidence_class||"unknown")}`),facts([
+            ["recordId",unknown(result.result_id)],["snapshotPin",unknown(item.snapshot_sha256)],["owner",unknown(result.owner)],["revision",unknown(result.source_revision)],["reportPin",unknown(result.report_sha256)],["executionState",t(result.execution_status||"unknown")],["admissionStatus",t(result.admission_status||"unknown")],
+            ...Object.entries(result.basis||{}).map(([key,v])=>[key,unknown(v)])]));
+          detail.append(table(["economicMetric","declaredValue"],economicMetrics.map(key=>[t(key),economicNumber(result.metrics?.[key])])));root.append(detail);
+        });
+      } else if(k==="economic") {
+        root.append(node("p",t(data.status),data.status==="not_comparable"?"insight-warning":""),node("p",t("economicRatio"),"live-muted"));
+        if(data.reasons?.length) {
+          const reasons=node("ul");data.reasons.forEach(reason=>{
+            const [code,field]=String(reason).split(":");reasons.append(node("li",t(code)+(field?": "+t(field):"")));
+          });root.append(reasons);
+        }
+        const before=insightState.economicList?.results?.find(item=>item.snapshot_sha256===data.input_pins?.before_sha256)?.result;
+        const after=insightState.economicList?.results?.find(item=>item.snapshot_sha256===data.input_pins?.after_sha256)?.result;
+        root.append(table(["economicMetric","economicBefore","economicAfter","economicDelta"],economicMetrics.map(key=>[
+          t(key),economicNumber(data.metrics?.[key]?.before ?? before?.metrics?.[key]),economicNumber(data.metrics?.[key]?.after ?? after?.metrics?.[key]),economicNumber(data.metrics?.[key]?.delta)
+        ])));
+        root.append(fingerprintDetails(Object.entries(data.input_pins||{}).map(([key,v])=>[key,unknown(v)])));
+      } else if(k==="compare") {
         const steps=Array.isArray(data.steps)?data.steps:[];
         root.append(node("p",`${t("changedSteps")}: ${steps.filter(s=>s.status!=="unchanged").length}`));
         root.append(node("p",t("economicUnavailable"),"insight-warning"));
@@ -427,6 +477,37 @@
     loadInsight("history","/v1/history?"+params,"quant.research_history.v1");
   }
   $("compare-load").onclick=()=>loadInsight("compare","/v1/compare?"+new URLSearchParams({before:$("compare-before").value.trim(),after:$("compare-after").value.trim()}),"quant.workflow_comparison.v1");
+  async function loadEconomicResults(more=false) {
+    const epoch=authEpoch, sequence=(insightSequence.economicList||0)+1;
+    const previous=more?insightState.economicList:null;
+    const offset=previous?.next_offset;
+    if(more && offset==null) return;
+    insightSequence.economicList=sequence;
+    if(!more) {
+      insightSequence.economic=(insightSequence.economic||0)+1;
+      insightState.economic=null;delete insightStatus.economic;
+      insightState.economicList=null;
+      $("economic-before").value="";$("economic-after").value="";
+    }
+    insightStatus.economicList="insightLoading";renderInsights();
+    try {
+      const response=await get("/v1/economic-results?"+new URLSearchParams({limit:"100",offset:String(more?offset:0)}));
+      if(epoch!==authEpoch || sequence!==insightSequence.economicList) return;
+      if(response.schema!=="quant.economic_result_list.v1" || !Array.isArray(response.results)) throw Error("Invalid API");
+      const results=new Map((previous?.results||[]).map(item=>[item.snapshot_sha256,item]));
+      response.results.forEach(item=>results.set(item.snapshot_sha256,item));
+      insightState.economicList={...response,results:[...results.values()]};delete insightStatus.economicList;
+    } catch(_) {
+      if(epoch!==authEpoch || sequence!==insightSequence.economicList) return;
+      insightStatus.economicList="insightFailed";
+    } finally {
+      if(epoch===authEpoch && sequence===insightSequence.economicList) render();
+    }
+  }
+  $("economicList-load").onclick=()=>loadEconomicResults();
+  $("economicList-more").onclick=()=>loadEconomicResults(true);
+  ["economic-before","economic-after"].forEach(id=>$(id).onchange=()=>{insightSequence.economic=(insightSequence.economic||0)+1;insightState.economic=null;delete insightStatus.economic;renderInsights();});
+  $("economic-load").onclick=()=>loadInsight("economic","/v1/economic-compare?"+new URLSearchParams({before:$("economic-before").value,after:$("economic-after").value}),"quant.economic_comparison.v1");
   $("history-load").onclick=()=>loadHistory();
   $("history-next").onclick=()=>loadHistory(insightState.history?.next_offset||0);
   $("impact-load").onclick=()=>{

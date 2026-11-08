@@ -4,7 +4,8 @@
 
 Use `compare-results` only with explicit `quant.economic_result.v1` receipts and
 exact file digests. The supplied examples are **synthetic**, not exported real
-studies. This new contract is not yet emitted by the private Research producer.
+studies. The private Research Owner now exports selected retained historical results through
+its standalone `research_economic_export.py`; unsupported basis remains null.
 The existing workflow comparison remains an engineering comparison and does not
 silently consume these files or claim investment performance.
 
@@ -69,8 +70,37 @@ string. A pinned file proves byte identity, not who produced it or whether its
 claims are true. `report_sha256` is a declared reference, not a verified artifact
 read by this command. No input can grant research or execution authority.
 
-The next provider change must explicitly export universe, benchmark, assumptions
-and metric-definition fingerprints and an Owner verification receipt. Existing
+The current Owner adapter exports the metric-definition and available input
+fingerprints. Further provider work must supply demonstrated universe, benchmark
+and complete assumptions plus an Owner verification receipt. Existing
 within-study paired calculations do not by themselves supply this cross-study
 contract. Real historical mechanism results can remain formally blocked even
 when retained artifact hashes and paired arithmetic pass read-only verification.
+
+## Explicit cache and GUI
+
+Export a single Owner object with its `--single` mode, save it outside source,
+then import exactly those bytes:
+
+```sh
+quant-task --database "$TASK_DATABASE" economic-import --file "$RESULT_JSON" --sha256 "$RESULT_SHA256"
+quant-task --database "$TASK_DATABASE" economic-results --limit 100 --offset 0
+quant-task --database "$TASK_DATABASE" economic-compare BEFORE_FILE_SHA256 AFTER_FILE_SHA256
+```
+
+Imports add only a bounded result cache; they do not change workflow state,
+approvals or evidence. Queries verify the original cached bytes against the
+external file pin each time and never reopen Owner files or invoke an Owner.
+An old read-only database with no cache returns an empty list without migration.
+
+The live **Declared financial results** panel lists imported receipts and supports
+load-more pagination while preserving selected pins. It shows admitted sample
+and source fingerprints in details, observed scalar declarations, missing metrics
+as unknown, and comparison reasons. Not-comparable pairs retain individual
+declarations but no calculated deltas. Synthetic offline demos seed two marked
+example receipts. No private receipts are published to Pages.
+
+Routes: `GET /v1/economic-results?limit=100&offset=0` returns
+`quant.economic_result_list.v1` with results, total and next_offset;
+`GET /v1/economic-compare?before=SHA256&after=SHA256` compares two imported pins.
+Both share the existing loopback/authentication/read-only boundary.

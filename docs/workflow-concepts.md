@@ -26,3 +26,17 @@ Financial comparison and observation coverage have separate contracts:
 [read-only shadow observations](shadow-observations.md). Successful computation,
 matching file digests and a sufficient observation window each establish different
 facts; none alone validates a research conclusion or authorizes promotion.
+
+## Recheck a recorded blocker
+
+`quant-task --database "$TASK_DATABASE" recheck WORKFLOW_ID` and
+`GET /v1/workflows/{id}/recheck` reassess declared upstream evidence requirements
+using the current recorded checks and scope/expiry. The result reports the count
+of declared checks, unsatisfied dimensions, source and applicability reason. Zero
+checks means no declared evidence conditions, not a qualified study.
+
+The check never refreshes an Owner or changes workflow state. An already blocked
+pre-dispatch task remains blocked even if recorded requirements later become
+usable; the operator must resolve source evidence and review a new plan/approval
+for new execution. The GUI presents this as **Recheck recorded evidence** and
+keeps Owner refresh and execution authorization separate.

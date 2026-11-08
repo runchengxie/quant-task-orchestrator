@@ -2,7 +2,7 @@
 
 [English](economic-results.md)
 
-`compare-results` 只接受显式的 `quant.economic_result.v1` 结果文件和准确的文件 SHA-256。随附例子全部是**模拟数据**；私有 Research 生产者尚未导出这个新契约。现有工作流比较仍然只比较工程信息，不会自动读取这些文件或声称投资表现有效。
+`compare-results` 只接受显式的 `quant.economic_result.v1` 结果文件和准确的文件 SHA-256。随附例子全部是**模拟数据**；私有 Research 现已通过独立的 `research_economic_export.py` 导出选定历史结果，仍将无依据的口径保留为未知。现有工作流比较仍然只比较工程信息，不会自动读取这些文件或声称投资表现有效。
 
 ```sh
 quant-task compare-results \
@@ -35,4 +35,20 @@ quant-task compare-results \
 
 `owner` 和准入字段是声明，任何人都可以写出相同字符串。文件 pin 证明字节一致，不证明实际生产者或结论真实。`report_sha256` 是声明的报告引用，命令不会读取该报告做验证。任何输入都不能授予研究或执行权限。
 
-下一步由 Research 显式导出标的范围、基准、假设和指标定义摘要及负责系统验证回执。已有研究内部的配对计算不能直接替代跨研究契约。真实历史机制研究即使通过产物哈希和配对算术核对，也可能继续被正式准入阻塞。
+当前 Research 适配器已导出有依据的输入和指标定义摘要；后续仍须补齐有证据支持的标的范围、基准和完整假设及负责系统验证回执。已有研究内部的配对计算不能直接替代跨研究契约。真实历史机制研究即使通过产物哈希和配对算术核对，也可能继续被正式准入阻塞。
+
+## 显式缓存与 GUI
+
+使用负责系统导出器的 `--single` 模式生成单个结果对象，保存在源码外，再导入准确的文件字节：
+
+```sh
+quant-task --database "$TASK_DATABASE" economic-import --file "$RESULT_JSON" --sha256 "$RESULT_SHA256"
+quant-task --database "$TASK_DATABASE" economic-results --limit 100 --offset 0
+quant-task --database "$TASK_DATABASE" economic-compare BEFORE_FILE_SHA256 AFTER_FILE_SHA256
+```
+
+导入只添加受限结果缓存，不改变流程、批准或证据状态。查询会重新核对缓存字节与外部文件 pin，不重新读取负责系统文件，也不调用负责系统。旧的只读数据库没有缓存表时返回空列表，不执行迁移。
+
+实时 GUI 的“声明的金融结果”支持加载更多结果并保留已选 pin；详情展示样本与来源摘要，缺失指标保持未知。不可比较时可查看各自声明的指标，但不计算差值。离线 Demo 只加入两个明确标记的模拟结果，Pages 不发布私有结果。
+
+`GET /v1/economic-results?limit=100&offset=0` 返回 `quant.economic_result_list.v1`、结果、总数和下一页偏移；`GET /v1/economic-compare?before=SHA256&after=SHA256` 比较两个已导入的 pin。两者沿用回环地址、鉴权和只读边界。

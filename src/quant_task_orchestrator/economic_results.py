@@ -138,7 +138,7 @@ def validate_result(value):
     return value
 
 
-def load_result(path, expected_sha256):
+def read_result_bytes(path, expected_sha256):
     """Read the hash-checked regular file through non-symlink directory handles."""
     if not _hex(expected_sha256):
         raise ValueError("INVALID_ECONOMIC_RESULT_PIN")
@@ -166,6 +166,14 @@ def load_result(path, expected_sha256):
     if len(body) > 1_048_576 or hashlib.sha256(body).hexdigest() != expected_sha256:
         raise ValueError("ECONOMIC_RESULT_PIN_MISMATCH")
 
+    return body
+
+
+def parse_result(body):
+    """Validate the bounded original bytes stored by the explicit import path."""
+    if not isinstance(body, bytes) or len(body) > 1_048_576:
+        raise ValueError("INVALID_ECONOMIC_RESULT_FILE")
+
     def unique(pairs):
         result = {}
         for key, value in pairs:
@@ -183,6 +191,10 @@ def load_result(path, expected_sha256):
     except (RecursionError, UnicodeError) as error:
         raise ValueError("INVALID_ECONOMIC_RESULT_JSON") from error
     return validate_result(result)
+
+
+def load_result(path, expected_sha256):
+    return parse_result(read_result_bytes(path, expected_sha256))
 
 
 def compare_results(before, after):

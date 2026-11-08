@@ -92,6 +92,17 @@
         <summary data-i18n="insights">Evidence and history insights</summary>
         <p data-i18n="insightsReadOnly">Read-only comparisons and recorded evidence. No execution or approval.</p>
         <datalist id="workflow-options"></datalist>
+        <section id="economic-panel"><h2 data-i18n="economicTitle">Declared financial results</h2>
+          <p data-i18n="economicHelp">Load explicitly imported results from the local cache. No Owner request is made.</p>
+          <button id="economicList-load" data-i18n="economicListLoad">Load results</button>
+          <div id="economicList-result" aria-live="polite"></div>
+          <button id="economicList-more" hidden data-i18n="economicListMore">Load more results</button>
+          <div class="insight-controls"><label><span data-i18n="economicBefore">Before result</span><select id="economic-before"></select></label>
+          <label><span data-i18n="economicAfter">After result</span><select id="economic-after"></select></label>
+          <button id="economic-load" data-i18n="economicCompare">Compare financial results</button></div>
+          <p data-i18n="economicAuthority">Owner-declared basis; provenance unverified. No research validation, promotion authorization or causal attribution.</p>
+          <div id="economic-result" aria-live="polite"></div>
+        </section>
         <section><h2 data-i18n="compareTitle">Compare workflows</h2>
           <div class="insight-controls"><label><span data-i18n="beforeWorkflow">Before workflow</span><input id="compare-before" list="workflow-options" autocomplete="off"></label>
           <label><span data-i18n="afterWorkflow">After workflow</span><input id="compare-after" list="workflow-options" autocomplete="off"></label>

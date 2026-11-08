@@ -40,6 +40,7 @@ Replace the output root with a directory outside your checkout, then open
 credentials or network. All demo evidence and history are synthetic. For real
 owner setup and existing databases, see [setup](docs/setup.md).
 
+- [Agent evaluation plan](docs/agent-evaluation-plan.md)
 - [Workbench concepts](docs/workflow-concepts.md)
 - [Financial result declarations](docs/economic-results.md), [shadow observations](docs/shadow-observations.md)
 - [Evidence applicability](docs/evidence-applicability.md), [comparison and impact](docs/insights.md)
