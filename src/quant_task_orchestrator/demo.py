@@ -134,6 +134,40 @@ def run_demo(output_root):
             "source_id": "synthetic-public-demo",
             "records": records,
         }
+        from .economic_cache import import_result
+        from .economic_results import HASH_FIELDS
+
+        for number in (1, 2):
+            economic = {
+                "schema": "quant.economic_result.v1",
+                "owner": "quant-research",
+                "source_revision": "0" * 40,
+                "result_id": digest({"synthetic_economic": number}),
+                "report_sha256": digest({"synthetic_report": number}),
+                "evidence_class": "synthetic",
+                "execution_status": "succeeded",
+                "admission_status": "blocked",
+                "basis": {key: digest({"synthetic_basis": key}) for key in HASH_FIELDS}
+                | {
+                    "sample_start": "2025-01-01",
+                    "sample_end": "2025-12-31",
+                    "time_zone": "UTC",
+                    "currency": "USD",
+                    "return_frequency": "daily",
+                    "history_visibility": "seen",
+                },
+                "metrics": {
+                    "total_return": 0.08 + number * 0.02,
+                    "annualized_return": None,
+                    "max_drawdown": 0.06,
+                    "annualized_volatility": None,
+                    "sharpe": None,
+                    "turnover": None,
+                },
+            }
+            economic_path = root / ("synthetic-economic-" + str(number) + ".json")
+            economic_path.write_text(json.dumps(economic, indent=2))
+            import_result(store, economic_path, file_sha(economic_path))
         history_path = root / "synthetic-history.json"
         history_path.write_text(json.dumps(example, indent=2))
         install_history(store, history_path, file_sha(history_path))

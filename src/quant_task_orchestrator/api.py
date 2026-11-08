@@ -89,7 +89,11 @@ def handler_for(database, *, token=None):
             try:
                 limit = int(query.get("limit", ["100"])[0])
                 offset = int(query.get("offset", ["0"])[0])
-                after = int(query.get("after", ["0"])[0]) if parts != ["v1", "compare"] else 0
+                after = (
+                    int(query.get("after", ["0"])[0])
+                    if parts not in (["v1", "compare"], ["v1", "economic-compare"])
+                    else 0
+                )
                 tail = int(query["tail"][0]) if "tail" in query else None
                 if (
                     not 1 <= limit <= 1000
@@ -117,6 +121,22 @@ def handler_for(database, *, token=None):
                         ):
                             raise ValueError("INVALID_COMPARISON_QUERY")
                         result = compare_workflows(store, query["before"][0], query["after"][0])
+                    elif parts == ["v1", "economic-results"]:
+                        from .economic_cache import list_results
+
+                        if set(query) - {"limit", "offset"} or any(
+                            len(x) != 1 for x in query.values()
+                        ):
+                            raise ValueError("INVALID_ECONOMIC_QUERY")
+                        result = list_results(store, limit=limit, offset=offset)
+                    elif parts == ["v1", "economic-compare"]:
+                        from .economic_cache import compare_cached
+
+                        if set(query) != {"before", "after"} or any(
+                            len(x) != 1 for x in query.values()
+                        ):
+                            raise ValueError("INVALID_ECONOMIC_QUERY")
+                        result = compare_cached(store, query["before"][0], query["after"][0])
                     elif parts == ["v1", "impact"]:
                         from .insights import impact_preview
 
@@ -186,6 +206,16 @@ def handler_for(database, *, token=None):
                     elif (
                         len(parts) == 4
                         and parts[:2] == ["v1", "workflows"]
+                        and parts[3] == "recheck"
+                    ):
+                        from .recheck import recheck_workflow
+
+                        if query:
+                            raise ValueError("INVALID_RECHECK_QUERY")
+                        result = recheck_workflow(store, parts[2])
+                    elif (
+                        len(parts) == 4
+                        and parts[:2] == ["v1", "workflows"]
                         and parts[3] == "events"
                     ):
                         result = {
@@ -196,7 +226,14 @@ def handler_for(database, *, token=None):
                         return self.send_json(404, {"code": "NOT_FOUND"})
                 self.send_json(200, result)
             except (ValueError, TypeError, RecursionError):
-                if len(parts) > 1 and parts[1] in {"compare", "impact", "history", "evaluations"}:
+                if len(parts) > 1 and parts[1] in {
+                    "compare",
+                    "impact",
+                    "history",
+                    "evaluations",
+                    "economic-results",
+                    "economic-compare",
+                }:
                     self.send_json(400, {"code": "INSIGHTS_REQUEST_REJECTED"})
                 else:
                     self.send_json(404, {"code": "WORKFLOW_UNAVAILABLE"})

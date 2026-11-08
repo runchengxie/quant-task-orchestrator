@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "quant-task-orchestrator"
-version = "0.6.0"
+version = "0.7.0"
 description = "Thin, owner-aware coordination for quantitative research workflows"
 requires-python = ">=3.12"
 license = "MIT"

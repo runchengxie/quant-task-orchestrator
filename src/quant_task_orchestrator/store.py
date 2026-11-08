@@ -32,6 +32,8 @@ class Store:
             self.db = sqlite3.connect(self.path, timeout=10)
             self.db.executescript("""
                 PRAGMA journal_mode=WAL;
+                CREATE TABLE IF NOT EXISTS economic_result_snapshots(
+                    snapshot_sha256 TEXT PRIMARY KEY, payload BLOB NOT NULL);
                 CREATE TABLE IF NOT EXISTS research_history_snapshots(
                     snapshot_sha256 TEXT PRIMARY KEY, source_revision TEXT NOT NULL, payload TEXT NOT NULL);
                 CREATE TABLE IF NOT EXISTS evaluation_reports(

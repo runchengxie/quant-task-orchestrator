@@ -369,3 +369,7 @@
 }
 
 .live-workflows { align-self: start; }
+
+#economic-panel details { margin: 12px 0; overflow-wrap: anywhere; }
+#economic-panel select { max-width: 100%; min-width: 0; }
+#economic-panel > p { font-size: 13px; line-height: 1.6; }

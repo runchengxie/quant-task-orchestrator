@@ -256,6 +256,24 @@ def main(argv=None):
     comparison.add_argument("after_id")
     impact = commands.add_parser("impact")
     impact.add_argument("--proposal", required=True, type=Path)
+    economic_import = commands.add_parser(
+        "economic-import", help="Explicitly import one hash-pinned economic result"
+    )
+    economic_import.add_argument("--file", type=Path, required=True)
+    economic_import.add_argument("--sha256", required=True)
+    economic_list = commands.add_parser("economic-results")
+    economic_list.add_argument("--limit", type=int, default=100)
+    economic_list.add_argument("--offset", type=int, default=0)
+    economic_compare = commands.add_parser("economic-compare")
+    economic_compare.add_argument("before_sha256")
+    economic_compare.add_argument("after_sha256")
+    recorded_recheck = commands.add_parser(
+        "recheck", help="Reassess recorded evidence; never refresh or execute Owners"
+    )
+    recorded_recheck.add_argument("workflow_id")
+    commands.add_parser(
+        "agent-eval-plan", help="Prepare a not-run Codex evaluation and independent-review rubric"
+    )
     history_import = commands.add_parser("history-import")
     history_import.add_argument("--file", required=True, type=Path)
     history_import.add_argument("--sha256", required=True)
@@ -291,6 +309,10 @@ def main(argv=None):
             "health",
         }:
             result = _independent_operation(args)
+        elif args.command == "agent-eval-plan":
+            from .agent_eval_plan import build_agent_evaluation_plan
+
+            result = build_agent_evaluation_plan()
         elif args.command == "demo":
             from .demo import run_demo
 
@@ -375,6 +397,9 @@ def main(argv=None):
                 serve(args.database, args.host, args.port, args.token_file)
                 return 0
             readonly = args.command in {
+                "economic-results",
+                "economic-compare",
+                "recheck",
                 "inspect",
                 "list",
                 "events",
@@ -387,7 +412,23 @@ def main(argv=None):
                 "evaluations",
             }
             with Store(args.database, readonly=readonly) as store:
-                if args.command == "compare":
+                if args.command == "economic-import":
+                    from .economic_cache import import_result
+
+                    result = import_result(store, args.file, args.sha256)
+                elif args.command == "economic-results":
+                    from .economic_cache import list_results
+
+                    result = list_results(store, limit=args.limit, offset=args.offset)
+                elif args.command == "economic-compare":
+                    from .economic_cache import compare_cached
+
+                    result = compare_cached(store, args.before_sha256, args.after_sha256)
+                elif args.command == "recheck":
+                    from .recheck import recheck_workflow
+
+                    result = recheck_workflow(store, args.workflow_id)
+                elif args.command == "compare":
                     from .insights import compare_workflows
 
                     result = compare_workflows(store, args.before_id, args.after_id)
