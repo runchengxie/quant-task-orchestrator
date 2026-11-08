@@ -54,3 +54,7 @@ consistency. The scan uses one SQLite read snapshot (`sqlite_read_snapshot`), so
 commits cannot shift pages or introduce duplicate/missing source workflows. A
 nested savepoint preserves any caller transaction; preview never commits it. No production database or Owner
 process is required for the synthetic tests.
+
+A separate [declared financial-result comparison](economic-results.md) accepts
+explicitly pinned envelopes. It does not change this workflow route or infer
+missing Owner exports.

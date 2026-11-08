@@ -40,6 +40,8 @@ Replace the output root with a directory outside your checkout, then open
 credentials or network. All demo evidence and history are synthetic. For real
 owner setup and existing databases, see [setup](docs/setup.md).
 
+- [Workbench concepts](docs/workflow-concepts.md)
+- [Financial result declarations](docs/economic-results.md), [shadow observations](docs/shadow-observations.md)
 - [Evidence applicability](docs/evidence-applicability.md), [comparison and impact](docs/insights.md)
 - [Offline demo and trace evaluation](docs/public-demo.md), [history snapshots](docs/history.md)
 - [Live workbench](docs/live-workbench.md) and [owner adapters](docs/owner-adapters.md)

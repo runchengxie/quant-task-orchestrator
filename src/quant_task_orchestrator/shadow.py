@@ -3,17 +3,23 @@
 import hashlib
 import json
 import os
+import sqlite3
 import stat
+import subprocess
+import time
 import uuid
+from datetime import UTC, datetime
 from pathlib import Path
 
 from .contracts import build_plan, exact, file_sha, verify_bindings
 from .event_inbox import safe_path
+from .owners import OwnerError
 from .scheduler import Scheduler
 from .store import Store
 
 
 def run_shadow(config_file, expected_sha256, output_root):
+    started = time.monotonic()
     config_file = Path(config_file).absolute()
     safe_path(config_file)
     descriptor = os.open(config_file, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
@@ -61,29 +67,47 @@ def run_shadow(config_file, expected_sha256, output_root):
             for name in sorted(adapters)
         ],
     }
-    plan = build_plan(workflow, config)
-    if file_sha(config_file) != expected_sha256:
-        raise ValueError("SHADOW_CONFIG_CHANGED")
     root = safe_path(output_root)
     root.mkdir(parents=True, exist_ok=True, mode=0o700)
     output = root / run_id
     output.mkdir(mode=0o700)
-    with Store(output / "workflow.sqlite") as store:
-        wid = store.submit(plan)["workflow_id"]
-        store.approve(
-            wid,
-            plan["plan_sha256"],
-            sorted({x["kind"] for x in adapters.values()}),
-            "readonly-data-shadow",
-        )
-        view = Scheduler(store).tick(wid)
-    verify_bindings(plan)
+    plan, wid, view, failure_phase = None, None, {"status": "FAILED", "steps": []}, "binding"
+    try:
+        plan = build_plan(workflow, config)
+        if file_sha(config_file) != expected_sha256:
+            raise ValueError("SHADOW_CONFIG_CHANGED")
+        failure_phase = "execution"
+        with Store(output / "workflow.sqlite") as store:
+            wid = store.submit(plan)["workflow_id"]
+            store.approve(
+                wid,
+                plan["plan_sha256"],
+                sorted({x["kind"] for x in adapters.values()}),
+                "readonly-data-shadow",
+            )
+            view = Scheduler(store).tick(wid)
+        verify_bindings(plan)
+        failure_phase = None
+    except (
+        OwnerError,
+        ValueError,
+        OSError,
+        TypeError,
+        KeyError,
+        sqlite3.Error,
+        subprocess.SubprocessError,
+    ):
+        # Preserve a failed observation without exporting private exception text.
+        view = {"status": "FAILED", "steps": []}
     result = {
         "schema": "quant.data_shadow.v1",
+        "observed_at": datetime.now(UTC).isoformat(),
+        "duration_seconds": time.monotonic() - started,
         "run_id": run_id,
         "workflow_id": wid,
         "config_sha256": expected_sha256,
-        "plan_sha256": plan["plan_sha256"],
+        "plan_sha256": plan["plan_sha256"] if plan else None,
+        "failure_phase": failure_phase,
         "shadow_only": True,
         "status": view["status"],
         "steps": view["steps"],
@@ -92,7 +116,10 @@ def run_shadow(config_file, expected_sha256, output_root):
         "promotion_authorized": False,
         "new_model_calls": 0,
     }
-    for name, value in [("plan.json", plan), ("assessment.json", result)]:
+    records = [("assessment.json", result)]
+    if plan is not None:
+        records.insert(0, ("plan.json", plan))
+    for name, value in records:
         path = output / name
         with path.open("x") as stream:
             json.dump(value, stream, indent=2, allow_nan=False)

@@ -175,6 +175,18 @@
       $("metrics").append(e);
     });
   }
+  const evidenceDimensions = ["input_integrity", "historical_pit", "execution_semantics", "independent_review", "economic_conclusion", "promotion"];
+  const responsibleSystem = s => {
+    const systems={runtime:"system_runtime",research:"system_research",research_snapshot:"system_research",codex_task:"system_research",native_session:"system_research",data:"system_data",raw_observation:"system_data",report:"system_report"};
+    return t(Object.hasOwn(systems,s.kind) ? systems[s.kind] : "unknown");
+  };
+  const dimensionLabel = k => t(k === "promotion" ? "promotionCheck" : k);
+  function eventSummary(code) {
+    const keys = {"workflow.submitted":"eventSubmitted", "workflow.approved":"eventApproved", "workflow.cancel_requested":"eventCancel", "owner.changed":"eventOwner", "data.published":"eventData", "report.published":"eventReport"};
+    const normalized=String(code || "").replace(/^step_/, "step.");
+    const key=keys[normalized] || (normalized.startsWith("step.") ? "event_"+normalized.slice(5) : "eventUnknown");
+    return window.liveLocales.en[key] ? t(key) : t("eventUnknown");
+  }
   function renderDetail() {
     const root = $("detail");
     root.replaceChildren();
@@ -195,9 +207,18 @@
     p.append(outcome,node("p",t("executionNotQualification"),"live-muted"));
     if(urgent) {
       const callout=node("div",undefined,"live-next-action");
-      callout.append(node("strong",`${t("needsAttention")}: ${urgent.id}`),node("p",`${t("code")}: ${unknown(urgent.recovery?.code || urgent.error_code)}`));
+      callout.append(node("strong",`${t("needsAttention")}: ${urgent.id}`),node("p",`${t("owner")}: ${responsibleSystem(urgent)}`),node("p",t("ownersHelp"),"live-muted"),node("p",`${t("code")}: ${unknown(urgent.recovery?.code || urgent.error_code)}`));
       const actions=urgent.recovery?.actions||[];
-      callout.append(node("p",`${t("nextStep")}: ${actions.length?actions.map(t).join(" · "):t("inspectOwnerEvidence")}`));p.append(callout);
+      callout.append(node("p",`${t("nextStep")}: ${actions.length?actions.map(t).join(" · "):t("inspectOwnerEvidence")}`));
+      const checks=urgent.evidence?.checks || {};
+      const missing=evidenceDimensions.filter(k=>checks[k]?.status === "missing");
+      const inapplicable=evidenceDimensions.filter(k=>checks[k]?.status === "not_applicable" || checks[k]?.applicability?.usable === false);
+      [["missingChecks",missing],["inapplicableChecks",inapplicable]].forEach(([label,dimensions])=>{
+        if(dimensions.length) callout.append(node("p",`${t(label)}: ${dimensions.map(dimensionLabel).join(" · ")}`));
+      });
+      const inspect=node("button",t("inspectStep"));inspect.type="button";inspect.id="inspect-next-step";
+      inspect.onclick=()=>{stepId=urgent.id;renderDetail();const target=$("step-evidence");target?.scrollIntoView({block:"start",behavior:"instant"});target?.focus({preventScroll:true});};
+      callout.append(inspect);p.append(callout);
     }
     const technical=facts([["workflowId",unknown(view.workflow_id)],["plan",unknown(view.plan_sha256)],["approved",value(view.approved)],["promotion",value(view.promotion_authorized)],["created",time(view.created_at)],["updated",time(view.updated_at)],["freshness",view.freshness?t(view.freshness):t("unknown")]]);
     root.append(p,disclosure("workflow-technical",t("technicalDetails"),technical));
@@ -248,7 +269,8 @@
       const info = panel(s.id);
       info.append(
         facts([
-          ["owner", unknown(s.owner_id)],
+          ["owner", responsibleSystem(s)],
+          ["ownerRecord", unknown(s.owner_id)],
           ["revision", unknown(s.owner_revision)],
           ["updated", time(s.updated_at)],
           ["observed", time(s.observed_at)],
@@ -288,6 +310,7 @@
           fingerprintDetails([["marketAsOf",time(c.scope?.as_of)],["assessedAt",time(c.assessed_at)],["validUntil",time(c.valid_until)],["digest",unknown(c.evidence_sha256)],["dataHash",unknown(c.scope?.data_sha256)],["strategyHash",unknown(c.scope?.strategy_sha256)],["universeHash",unknown(c.scope?.universe_sha256)],["sampleStart",unknown(c.scope?.sample_start)],["sampleEnd",unknown(c.scope?.sample_end)]]));
         grid.append(e);
       });
+      evidence.id="step-evidence";evidence.tabIndex=-1;
       evidence.append(grid);
       root.append(evidence);
       const recovery = panel(t("recovery"));
@@ -306,17 +329,12 @@
     }
     const ep = panel(t("events")),
       list = node("ol", undefined, "live-events");
-    events
-      .slice(-20)
-      .reverse()
-      .forEach((e) =>
-        list.append(
-          node(
-            "li",
-            `${time(e.created)} · ${e.type} · ${e.step_id || "—"} · #${e.seq}`,
-          ),
-        ),
-      );
+    ep.append(node("p",t("timelineHelp"),"live-muted"));
+    events.slice(-20).reverse().forEach(e=>{
+      const item=node("li");
+      item.append(node("p",`${time(e.created)} · ${eventSummary(e.type)} · ${e.step_id || "—"} · #${e.seq}`));
+      const detail=node("details");detail.append(node("summary",t("technicalDetails")),facts([["eventCode",unknown(e.type)]]));item.append(detail);list.append(item);
+    });
     if (!events.length) ep.append(node("p", t("noEvents"), "live-muted"));
     ep.append(list);
     root.append(disclosure("event-history",t("events"),ep));

@@ -80,3 +80,5 @@ All read-only routes open an existing database without migrations or owner calls
 Writable coordinator operations add auxiliary tables; old workflow, plan and step
 records remain readable. Final state and validated observation are committed in
 one transaction. Back up through SQLite's backup API before upgrading retained state.
+
+For terminology and the read-only evidence navigation, see [workbench concepts](workflow-concepts.md).

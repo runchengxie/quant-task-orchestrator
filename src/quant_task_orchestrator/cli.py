@@ -57,6 +57,19 @@ def _operations_parsers(commands):
     shadow.add_argument("--config", type=Path, required=True)
     shadow.add_argument("--expected-config-sha256", required=True)
     shadow.add_argument("--output-root", type=Path, required=True)
+    shadow_history = commands.add_parser(
+        "shadow-history", help="Summarize recorded read-only data checks without running Owners"
+    )
+    shadow_history.add_argument("--root", type=Path, required=True)
+    shadow_history.add_argument("--expected-config-sha256", required=True)
+    shadow_history.add_argument("--limit", type=int, default=500)
+    financial = commands.add_parser(
+        "compare-results", help="Compare explicitly pinned Owner-declared economic result envelopes"
+    )
+    financial.add_argument("--before", type=Path, required=True)
+    financial.add_argument("--before-sha256", required=True)
+    financial.add_argument("--after", type=Path, required=True)
+    financial.add_argument("--after-sha256", required=True)
     storage = commands.add_parser(
         "storage-check", help="Read disk availability without deleting files"
     )
@@ -88,6 +101,21 @@ def _independent_operation(args):
         from .shadow import run_shadow
 
         return run_shadow(args.config, args.expected_config_sha256, args.output_root)
+    if args.command == "shadow-history":
+        from .shadow_history import summarize_shadows
+
+        return summarize_shadows(args.root, args.expected_config_sha256, limit=args.limit)
+    if args.command == "compare-results":
+        from .economic_results import compare_results, load_result
+
+        result = compare_results(
+            load_result(args.before, args.before_sha256), load_result(args.after, args.after_sha256)
+        )
+        result["input_pins"] = {
+            "before_sha256": args.before_sha256,
+            "after_sha256": args.after_sha256,
+        }
+        return result
     if args.command == "storage-check":
         from .ops import storage_assessment
 
@@ -248,6 +276,8 @@ def main(argv=None):
     try:
         if args.command in {
             "shadow-check",
+            "shadow-history",
+            "compare-results",
             "storage-check",
             "restore",
             "migration-check",

@@ -6,14 +6,14 @@ window.liveLocales = {
     session:"Codex session",turn:"Turn",observedTokens:"Observed tokens",cumulativeTokens:"Cumulative tokens",unknownUsage:"Turns with unknown usage",
     tokenLabel:"Private API token",connect:"Connect",disconnect:"Forget token",
     tokenMemory:"The token stays in this page's memory and is never stored in a URL or browser storage.",
-    evidenceState: "Owner evidence state",
+    evidenceState: "Responsible system evidence state",
     awaiting_event: "Awaiting publication hint",
     inspect_dependencies: "Inspect upstream dependencies",
     verify_original_session: "Verify original owner session",
     wait_for_owner: "Wait for owner completion",
     review_new_execution_scope: "Review the scope of a new execution",
     preserve_evidence: "Preserve recorded evidence",
-    observed: "Owner evidence observed (UTC)",
+    observed: "System evidence observed (UTC)",
     error: "Error code",
     awaiting_approval: "Awaiting approval",
     active: "Active",
@@ -46,8 +46,8 @@ window.liveLocales = {
     noMatch: "No loaded workflows match these filters.",
     select: "Select a workflow to inspect its dependencies and evidence.",
     steps: "Steps",
-    calls: "Owner calls",
-    errors: "Owner errors",
+    calls: "System calls",
+    errors: "System errors",
     interventions: "Operator interventions",
     cost: "Model cost (USD)",
     unknown: "Unknown",
@@ -79,8 +79,8 @@ window.liveLocales = {
     running_seconds: "Running seconds",
     blocked_seconds: "Blocked seconds",
     unknown_seconds: "Unknown seconds",
-    owner_calls: "Owner calls",
-    owner_errors: "Owner errors",
+    owner_calls: "System calls",
+    owner_errors: "System errors",
     model_cost_usd: "Model cost (USD)",
     input_integrity: "Input integrity",
     historical_pit: "Historical point-in-time",
@@ -121,25 +121,25 @@ window.liveLocales = {
     session:"Codex 会话",turn:"轮次",observedTokens:"已观测 Token",cumulativeTokens:"累计 Token",unknownUsage:"用量未知的轮次",
     tokenLabel:"私有 API 令牌",connect:"连接",disconnect:"忘记令牌",
     tokenMemory:"令牌仅保存在当前页面内存中，不写入网址或浏览器存储。",
-    evidenceState: "Owner 证据状态",
+    evidenceState: "负责系统证据状态",
     awaiting_event: "等待发布事件提示",
     inspect_dependencies: "检查上游依赖",
-    verify_original_session: "核对原始负责人会话",
-    wait_for_owner: "等待负责人完成",
+    verify_original_session: "核对原始负责系统会话",
+    wait_for_owner: "等待负责系统完成",
     review_new_execution_scope: "核对再次执行的范围",
     preserve_evidence: "保留已记录的证据",
-    observed: "负责人证据观测时间（UTC）",
+    observed: "负责系统证据观测时间（UTC）",
     error: "错误代码",
     awaiting_approval: "待批准",
     active: "执行中",
     needs_reconciliation: "需要核对",
     cancelling: "取消中",
     dispatching: "派发中",
-    last_observed_owner_state: "最近观测到的负责人状态；请核对记录的更新时间",
+    last_observed_owner_state: "最近观测到的负责系统状态；请核对记录的更新时间",
     skip: "跳转到正文",
     workbench: "研究工作台",
     readonly: "实时 · 只读",
-    authority: "执行与研究判断由各负责人负责。本页面不会批准研究或授权晋级。",
+    authority: "执行与研究判断由各负责系统负责。本页面不会批准研究或授权晋级。",
     language: "语言",
     polling: "每 5 秒刷新 · 时间均为 UTC",
     operations: "研究运行状态",
@@ -158,8 +158,8 @@ window.liveLocales = {
     noMatch: "已加载的工作流中没有符合条件的结果。",
     select: "选择工作流，查看依赖关系和证据。",
     steps: "步骤",
-    calls: "负责人调用次数",
-    errors: "负责人错误次数",
+    calls: "负责系统调用次数",
+    errors: "负责系统错误次数",
     interventions: "人工介入次数",
     cost: "模型费用（美元）",
     unknown: "未知",
@@ -169,14 +169,14 @@ window.liveLocales = {
     none: "无",
     evidence: "证据维度",
     recovery: "恢复建议",
-    actions: "负责人或操作人员可采取的措施",
+    actions: "负责系统或操作人员可采取的措施",
     operator: "需要人工处理",
     yes: "是",
     no: "否",
     events: "近期事件",
     noEvents: "暂无记录事件。",
-    owner: "负责人",
-    revision: "负责人代码版本",
+    owner: "负责系统",
+    revision: "负责系统代码版本",
     updated: "更新时间（UTC）",
     created: "创建时间（UTC）",
     freshness: "来源新鲜度",
@@ -191,8 +191,8 @@ window.liveLocales = {
     running_seconds: "运行秒数",
     blocked_seconds: "阻塞秒数",
     unknown_seconds: "未知状态秒数",
-    owner_calls: "负责人调用次数",
-    owner_errors: "负责人错误次数",
+    owner_calls: "负责系统调用次数",
+    owner_errors: "负责系统错误次数",
     model_cost_usd: "模型费用（美元）",
     input_integrity: "输入完整性",
     historical_pit: "历史时点一致性",
@@ -217,11 +217,11 @@ window.liveLocales = {
     needs_approval: "待批准",
     unavailable: "详情暂不可用；保留的显示内容可能已过期。",
     invalidGraph: "依赖缺失或存在循环",
-    inspect_owner: "检查负责人记录",
+    inspect_owner: "检查负责系统记录",
     lookup_original_key: "查找原始派发标识",
     restore_approved_binding: "恢复已批准的绑定",
     collect_pit_evidence: "收集历史时点证据",
-    owner_review: "请负责人复核",
+    owner_review: "请负责系统复核",
     operator_cancel: "与操作人员核对取消操作",
     wait_for_dependencies: "等待依赖完成",
     approve_exact_plan: "请操作人员核对精确计划批准情况",
@@ -241,9 +241,9 @@ Object.assign(window.liveLocales["zh-CN"], {
   insights:"证据与历史分析",insightsReadOnly:"只读比较与已记录证据。不会执行任务或批准变更。",
   compareTitle:"比较工作流",beforeWorkflow:"变更前工作流",afterWorkflow:"变更后工作流",compareLoad:"比较",changedSteps:"发生变化的步骤",differences:"差异",economicUnavailable:"暂不能比较经济表现；工程差异不能证明投资表现。",
   historyTitle:"研究历史",historySearch:"搜索已保留的历史",classification:"分类",allClassifications:"全部分类",research_conclusion:"研究结论",operational_failure:"运行故障",unclassified:"未分类",historyLoad:"搜索历史",nextPage:"下一页",topics:"主题",revisit:"重新检查条件",recordId:"记录摘要",historyCount:"匹配记录数",historySource:"导入快照",
-  impactTitle:"预览变更影响",changeKind:"变更类型",ownerRevision:"负责人代码版本",skillRevision:"技能版本",pinnedInput:"锁定输入",previousPin:"原哈希",nextPin:"新哈希",optionalTarget:"目标（可选）",impactLoad:"预览",directSteps:"直接受影响步骤",downstreamSteps:"下游步骤",scanScope:"扫描范围",scanned:"已扫描工作流",consistency:"读取一致性",notExecuted:"仅作预览，未执行变更；需要新计划与批准范围复核。",
+  impactTitle:"预览变更影响",changeKind:"变更类型",ownerRevision:"负责系统代码版本",skillRevision:"技能版本",pinnedInput:"锁定输入",previousPin:"原哈希",nextPin:"新哈希",optionalTarget:"目标（可选）",impactLoad:"预览",directSteps:"直接受影响步骤",downstreamSteps:"下游步骤",scanScope:"扫描范围",scanned:"已扫描工作流",consistency:"读取一致性",notExecuted:"仅作预览，未执行变更；需要新计划与批准范围复核。",
   evaluationTitle:"已记录工具轨迹评测",evaluationLoad:"读取评测",provenanceUnverified:"来源未经核验。轨迹内容是提交者的声明，不代表已验证的模型调用。",referenceOnly:"参考夹具：只演示评测程序，不能证明模型可靠。",recordedOnly:"仅检查已记录轨迹；评测器未调用模型。",modelEvaluated:"已评测模型",passedCases:"通过案例",suiteVersion:"规则版本",suiteHash:"规则摘要",traceHash:"轨迹摘要",missingEvidence:"缺失证据",toolFailures:"工具失败次数",humanTakeovers:"人工接管次数",unknownUsageEvents:"用量未知事件数",evaluationScope:"评测范围",
-  insightLoading:"正在读取…",insightFailed:"暂无法读取。请检查访问权限和输入后重试。",noResults:"暂无保留结果。",applicability:"证据适用性",scopeDetails:"适用范围与完整指纹",marketAsOf:"市场数据时点（UTC）",assessedAt:"证据评估时间（UTC）",validUntil:"评估有效期至（UTC）",sampleStart:"样本起始日期",sampleEnd:"样本结束日期",dataHash:"数据指纹",strategyHash:"策略指纹",universeHash:"研究范围指纹",usable:"已记录 Owner 检查；复用前请核对范围与有效期。",notUsable:"证据不适用于此范围",applicabilityUnknown:"适用性未知，请勿假定证据仍然有效。",
+  insightLoading:"正在读取…",insightFailed:"暂无法读取。请检查访问权限和输入后重试。",noResults:"暂无保留结果。",applicability:"证据适用性",scopeDetails:"适用范围与完整指纹",marketAsOf:"市场数据时点（UTC）",assessedAt:"证据评估时间（UTC）",validUntil:"评估有效期至（UTC）",sampleStart:"样本起始日期",sampleEnd:"样本结束日期",dataHash:"数据指纹",strategyHash:"策略指纹",universeHash:"研究范围指纹",usable:"已记录负责系统检查；复用前请核对范围与有效期。",notUsable:"证据不适用于此范围",applicabilityUnknown:"适用性未知，请勿假定证据仍然有效。",
   EXPIRED:"已过期",INVALID_SCOPE:"范围无效",MISSING_SCOPE:"缺少范围",SCOPE_UNAVAILABLE:"范围不可用",INVALID_METADATA:"元数据无效",NOT_VERIFIED:"未验证",VALIDITY_UNAVAILABLE:"有效期未知",INVALID_VALIDITY:"有效期无效",ASSESSMENT_IN_FUTURE:"评估时间在未来",UNSUITABLE_AUTHORITY:"证据来源权限不适用",IDENTITY_MISMATCH:"指纹不一致",AS_OF_MISMATCH:"市场时点不一致",SAMPLE_NOT_COVERED:"未覆盖样本",APPLICABLE:"适用",LEGACY_UNSCOPED:"历史证据未声明范围",CURRENT_UNSCOPED:"当前评估未指定请求范围"
 });
 Object.assign(window.liveLocales.en, {
@@ -253,9 +253,30 @@ Object.assign(window.liveLocales.en, {
 });
 Object.assign(window.liveLocales["zh-CN"], {
   added:"新增",removed:"移除",changed:"已变化",unchanged:"未变化",
-  owner_revision:"负责人代码版本",owner_plan_sha256:"负责人计划摘要",owner_request_sha256:"负责人请求摘要",pinned_input_sha256:"锁定输入摘要",skills:"技能",depends_on:"依赖",budgets:"预算",evidence_context:"证据范围",observed_usage:"观测用量",kind:"适配器类型",
+  owner_revision:"负责系统代码版本",owner_plan_sha256:"负责系统计划摘要",owner_request_sha256:"负责系统请求摘要",pinned_input_sha256:"锁定输入摘要",skills:"技能",depends_on:"依赖",budgets:"预算",evidence_context:"证据范围",observed_usage:"观测用量",kind:"适配器类型",
   scanCaution:"扫描仅描述保留记录中的引用关系，不能证明运行或经济结论兼容。"
 });
 
 Object.assign(window.liveLocales.en, {EVIDENCE_IDENTITY_UNAVAILABLE:"Evidence identity unavailable",INVALID_CONTEXT:"Invalid requested scope"});
 Object.assign(window.liveLocales["zh-CN"], {EVIDENCE_IDENTITY_UNAVAILABLE:"证据身份不可用",INVALID_CONTEXT:"请求范围无效"});
+
+Object.assign(window.liveLocales.en, {
+  owner:"Responsible system", events:"Workflow timeline", timelineHelp:"Important recorded workflow state changes, not complete execution logs.",
+  ownersHelp:"Responsible systems retain execution and research authority. This page only reads their records.",
+  inspectStep:"View step evidence and recovery", eventCode:"Event code", eventUnknown:"Recorded workflow event", missingChecks:"Recorded missing evidence", inapplicableChecks:"Recorded evidence not applicable",
+  eventSubmitted:"Workflow submitted", eventApproved:"Exact workflow plan approved", eventCancel:"Workflow cancellation requested", eventOwner:"Responsible system reported a change", eventData:"Data publication hint received", eventReport:"Report publication hint received",
+  event_pending:"Step is pending",event_waiting:"Step is waiting",event_ready:"Step is ready",event_dispatching:"Step dispatch started",event_running:"Step is running",event_succeeded:"Step execution succeeded",event_failed:"Step failed",event_blocked:"Step is blocked",event_cancelled:"Step cancelled",event_unknown:"Step state is unknown",event_needs_reconciliation:"Step needs reconciliation",event_cancelling:"Step cancellation in progress"
+});
+Object.assign(window.liveLocales["zh-CN"], {
+  owner:"负责系统", events:"流程时间线", timelineHelp:"展示已记录的重要流程状态变化，不是完整的执行日志。",
+  ownersHelp:"执行和研究决策仍由各负责系统掌握。本页面只读取其记录。",
+  inspectStep:"查看步骤证据与恢复建议", eventCode:"事件代码", eventUnknown:"已记录流程事件", missingChecks:"已记录的缺失证据", inapplicableChecks:"已记录的不适用证据",
+  eventSubmitted:"工作流已提交",eventApproved:"精确工作流计划已批准",eventCancel:"已请求取消工作流",eventOwner:"负责系统报告了变化",eventData:"已收到数据发布提示",eventReport:"已收到报告发布提示",
+  event_pending:"步骤待处理",event_waiting:"步骤等待中",event_ready:"步骤已就绪",event_dispatching:"步骤开始派发",event_running:"步骤运行中",event_succeeded:"步骤执行成功",event_failed:"步骤失败",event_blocked:"步骤已阻塞",event_cancelled:"步骤已取消",event_unknown:"步骤状态未知",event_needs_reconciliation:"步骤需要核对",event_cancelling:"步骤正在取消"
+});
+
+Object.assign(window.liveLocales.en, {system_runtime:"Backtest Runtime",system_research:"Research",system_data:"Market Data",system_report:"Reports"});
+Object.assign(window.liveLocales["zh-CN"], {system_runtime:"回测执行系统",system_research:"Research 研究系统",system_data:"市场数据系统",system_report:"报告系统"});
+
+Object.assign(window.liveLocales.en, {ownerRecord:"Execution record ID"});
+Object.assign(window.liveLocales["zh-CN"], {ownerRecord:"负责方记录标识"});
