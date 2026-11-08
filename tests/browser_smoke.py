@@ -31,22 +31,22 @@ def main():
             page.on("pageerror", lambda error: errors.append(str(error)))
             page.goto(f"http://127.0.0.1:{server.server_port}", wait_until="networkidle")
             assert page.locator(".workflow-row").count() == 3
-            assert (
-                page.locator("#step-detail")
-                .inner_text()
-                .find("Historical availability is unverified")
-                >= 0
-            )
+            summary = page.locator("#workflow-summary")
+            assert "3 of 6 steps complete" in summary.inner_text()
+            assert "Request historical availability evidence" in summary.inner_text()
+            assert not page.locator("#advanced-details").evaluate("node => node.open")
             page.locator('[data-workflow="synthetic-plan-03"]').click()
-            page.locator("#step-action").click()
-            assert "Running" in page.locator('[data-workflow="synthetic-plan-03"]').inner_text()
-            page.locator("#step-action").click()
-            assert (
-                "Awaiting review"
-                in page.locator('[data-workflow="synthetic-plan-03"]').inner_text()
-            )
+            assert "Task failed" in summary.inner_text()
+            assert "Inspect the failed run" in summary.inner_text()
+            assert page.locator(".node.failed").count() == 1
+            page.locator('[data-workflow="synthetic-cost-02"]').click()
+            assert "6 of 6 steps complete" in summary.inner_text()
+            assert "Review the completed evidence package" in summary.inner_text()
+            page.locator("#advanced-details > summary").click()
+            assert page.locator("#advanced-details").evaluate("node => node.open")
             page.locator("#language").click()
             assert page.locator("html").get_attribute("lang") == "zh-CN"
+            assert "六个步骤均已完成" in summary.inner_text()
             page.reload(wait_until="networkidle")
             assert page.locator("html").get_attribute("lang") == "zh-CN"
             page.locator("#language").click()
@@ -61,11 +61,7 @@ def main():
             page.set_viewport_size({"width": 390, "height": 844})
             assert page.evaluate("document.documentElement.scrollWidth <= innerWidth")
             page.locator('[data-workflow="synthetic-cost-02"]').click()
-            page.locator("#step-action").click()
-            assert (
-                "Awaiting review"
-                in page.locator('[data-workflow="synthetic-cost-02"]').inner_text()
-            )
+            assert "6 of 6 steps complete" in summary.inner_text()
             page.screenshot(path="/tmp/quant-task-orchestrator-mobile.png", full_page=True)
             assert not errors, errors
             browser.close()
@@ -74,7 +70,7 @@ def main():
         thread.join()
         server.server_close()
     print(
-        "Browser acceptance passed: desktop/mobile, filters, simulation, locale persistence, no page errors."
+        "Browser acceptance passed: desktop/mobile, three workflow outcomes, progressive disclosure, filters, locale persistence, no page errors."
     )
 
 

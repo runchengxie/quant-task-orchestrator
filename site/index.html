@@ -114,48 +114,7 @@
             >Run the live read-only workbench →</a
           >
         </p>
-        <section class="metrics" aria-label="Workflow overview">
-          <article>
-            <span data-i18n="totalWorkflows">WORKFLOWS</span>
-            <div>
-              03 <small data-i18n="acrossOwners">across domain owners</small>
-            </div>
-            <div class="metric-line">
-              <i class="teal"></i
-              ><span data-i18n="tracked">Every assignment traceable</span>
-            </div>
-          </article>
-          <article>
-            <span data-i18n="running">IN PROGRESS</span>
-            <div id="running-count">
-              01 <small data-i18n="activeExecution">active execution</small>
-            </div>
-            <div class="metric-line">
-              <i class="blue"></i
-              ><span data-i18n="ownerManaged">Workers managed by owners</span>
-            </div>
-          </article>
-          <article>
-            <span data-i18n="needsAttention">NEEDS ATTENTION</span>
-            <div id="attention-count">
-              02 <small data-i18n="explicitBlockers">explicit blockers</small>
-            </div>
-            <div class="metric-line">
-              <i class="amber"></i
-              ><span data-i18n="noSilent">No silent promotion</span>
-            </div>
-          </article>
-          <article>
-            <span data-i18n="evidenceLinks">EVIDENCE COVERAGE</span>
-            <div>
-              08<small>
-                / 10
-                <span data-i18n="linkedArtifacts">artifacts linked</span></small
-              >
-            </div>
-            <div class="mini-progress"><span></span></div>
-          </article>
-        </section>
+        <section id="workflow-summary" class="workflow-summary panel" aria-live="polite"></section>
         <section id="workflows" class="workflow-section">
           <div class="section-heading">
             <div class="tabs">
@@ -182,6 +141,8 @@
           </div>
           <div id="workflow-list" class="workflow-list"></div>
         </section>
+        <details id="advanced-details" class="advanced-details">
+          <summary data-i18n="advancedDetails">Steps, evidence and technical details</summary>
         <section class="detail-grid" aria-label="Selected workflow">
           <article class="panel graph-panel">
             <div class="panel-heading">
@@ -292,10 +253,11 @@
           </div>
           <div id="skill-list" class="skill-list"></div>
         </section>
+        </details>
         <footer>
           <span
             ><span class="footer-dot"></span>quant-task-orchestrator
-            <span class="mono">/ v0.2</span></span
+            <span class="mono">/ v0.5.1</span></span
           ><span data-i18n="footer"
             >Built for reproducible research. Designed around explicit
             boundaries.</span

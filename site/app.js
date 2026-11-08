@@ -48,7 +48,7 @@
     const rows = data.workflows.filter(
       (item) =>
         (filter !== "attention" ||
-          ["blocked", "approval", "review"].includes(item.status)) &&
+          ["blocked", "failed", "approval", "review"].includes(item.status)) &&
         `${t(item.name)} ${item.id}`
           .toLowerCase()
           .includes(search.toLowerCase()),
@@ -65,7 +65,7 @@
       button.addEventListener("click", () => {
         selected = button.dataset.workflow;
         stepIndex = workflow().steps.findIndex((step) =>
-          ["blocked", "running"].includes(step[1]),
+          ["blocked", "failed", "running"].includes(step[1]),
         );
         if (stepIndex < 0) stepIndex = 0;
         render();
@@ -78,7 +78,7 @@
     $("#graph").innerHTML = item.steps
       .map(
         (step, index) =>
-          `<button class="node ${step[1]} ${stepIndex === index ? "selected" : ""}" data-step="${index}" aria-pressed="${stepIndex === index}"><span class="node-top"><span class="mono">0${index + 1}</span><span class="node-state">${{ complete: "✓", blocked: "!", running: "◉", waiting: "○" }[step[1]]}</span></span><strong>${e(step[0])}</strong><small>${escape(step[2])}</small></button>`,
+          `<button class="node ${step[1]} ${stepIndex === index ? "selected" : ""}" data-step="${index}" aria-pressed="${stepIndex === index}"><span class="node-top"><span class="mono">0${index + 1}</span><span class="node-state">${{ complete: "✓", failed: "×", blocked: "!", running: "◉", waiting: "○" }[step[1]]}</span></span><strong>${e(step[0])}</strong><small>${escape(step[2])}</small></button>`,
       )
       .join("");
     document.querySelectorAll("[data-step]").forEach((button) =>
@@ -93,6 +93,7 @@
     const item = workflow();
     const step = item.steps[stepIndex];
     const stateLabel = {
+      failed: "failed",
       complete: "complete",
       blocked: "blocked",
       running: "executing",
@@ -104,12 +105,13 @@
         : step[1] === "running"
           ? "computeNote"
           : "doneNote";
+    if (step[1] === "failed") note = "failedNote";
     if (step[3] === "pitMissing") note = "pitBlock";
     if (step[3] === "approvalRequired") note = "approvalBlock";
     const definition = (key, value, mono = false) =>
       `<div class="definition"><span>${e(key)}</span><strong class="${mono ? "mono" : ""}">${escape(value)}</strong></div>`;
     $("#step-detail").innerHTML =
-      `<div class="inspector-label">${e("stepInspector")} <span class="mono">/ 0${stepIndex + 1}</span></div><h2>${e(step[0])}</h2>${badge(step[1], stateLabel)}${definition("domainOwner", step[2], true)}${definition("assignment", `demo-${item.id.slice(-2)}-0${stepIndex + 1}`, true)}${definition("evidence", t(step[3]))}${definition("sourceRevision", "synthetic · a14c82e", true)}${definition("budget", `900 ${t("seconds")}`)}<div class="evidence-box"><strong>${e("noPromotion")}</strong><p>${e(note)}</p></div><button class="inspector-action" id="step-action">${e(step[3] === "approvalRequired" ? "approveDemo" : step[1] === "running" ? "completeDemo" : "inspectManifest")}</button>`;
+      `<div class="inspector-label">${e("stepInspector")} <span class="mono">/ 0${stepIndex + 1}</span></div><h2>${e(step[0])}</h2>${badge(step[1], stateLabel)}${definition("domainOwner", step[2], true)}<details class="technical-details"><summary>${e("advancedDetails")}</summary>${definition("assignment", `demo-${item.id.slice(-2)}-0${stepIndex + 1}`, true)}${definition("evidence", t(step[3]))}${definition("sourceRevision", "synthetic · a14c82e", true)}${definition("budget", `900 ${t("seconds")}`)}</details><div class="evidence-box"><strong>${e(item.status === "complete" ? "workflowComplete" : "workflowOpen")}</strong><p>${e(note)}</p></div><button class="inspector-action" id="step-action">${e(step[3] === "approvalRequired" ? "approveDemo" : step[1] === "running" ? "completeDemo" : "inspectManifest")}</button>`;
     $("#step-action").addEventListener("click", () => {
       if (step[3] === "approvalRequired") {
         item.status = "running";
@@ -155,11 +157,11 @@
       "aria-label",
       language === "en" ? "切换到中文" : "Switch to English",
     );
-    const format = new Intl.NumberFormat(language, { minimumIntegerDigits: 2 });
-    $("#running-count").innerHTML =
-      `${format.format(data.workflows.filter((item) => item.status === "running").length)} <small>${e("activeExecution")}</small>`;
-    $("#attention-count").innerHTML =
-      `${format.format(data.workflows.filter((item) => ["blocked", "approval", "review"].includes(item.status)).length)} <small>${e("explicitBlockers")}</small>`;
+    const item = workflow();
+    const done = item.steps.filter((step) => step[1] === "complete").length;
+    const state = ["complete", "failed"].includes(item.status) ? item.status : item.status === "running" ? "running" : "blocked";
+    const progress = t("progressSummary").replace("{done}", done).replace("{total}", item.steps.length);
+    $("#workflow-summary").innerHTML = `<div class="summary-title"><div><div class="eyebrow">${e("selectedWorkflow")}</div><h2>${e(item.name)}</h2></div>${badge(item.status, item.label)}</div><div class="summary-progress"><strong>${escape(progress)}</strong><span class="track"><span style="width:${done / item.steps.length * 100}%"></span></span></div><div class="summary-copy"><div><h3>${e("currentSituation")}</h3><p>${e(state + "Summary")}</p></div><div class="next-step"><h3>${e("nextStep")}</h3><p>${e(state + "Next")}</p></div></div>`;
     renderRows();
     renderMap();
     renderInspector();
@@ -214,6 +216,7 @@
   });
   document.querySelectorAll(".nav-item").forEach((link) =>
     link.addEventListener("click", () => {
+      if (link.getAttribute("href") !== "#workflows") $("#advanced-details").open = true;
       document
         .querySelectorAll(".nav-item")
         .forEach((item) => item.classList.toggle("active", item === link));

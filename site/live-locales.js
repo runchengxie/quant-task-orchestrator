@@ -1,6 +1,8 @@
 "use strict";
 window.liveLocales = {
   en: {
+    overview:"Overview",loadedWorkflows:"Loaded workflows",needsAttention:"Needs attention",inProgress:"In progress",executionComplete:"Execution completed",operatingMetrics:"Operating metrics",executionState:"Execution",researchQualification:"Research qualification",executionNotQualification:"Successful execution does not establish a validated research conclusion.",nextStep:"Next step",inspectOwnerEvidence:"Inspect the owner's recorded evidence and recovery guidance",technicalDetails:"Technical details",runDetails:"Run details and Agent usage",workflowId:"Workflow ID",
+
     session:"Codex session",turn:"Turn",observedTokens:"Observed tokens",cumulativeTokens:"Cumulative tokens",unknownUsage:"Turns with unknown usage",
     tokenLabel:"Private API token",connect:"Connect",disconnect:"Forget token",
     tokenMemory:"The token stays in this page's memory and is never stored in a URL or browser storage.",
@@ -114,6 +116,8 @@ window.liveLocales = {
     code: "Recovery code",
   },
   "zh-CN": {
+    overview:"总览",loadedWorkflows:"已加载流程",needsAttention:"需要关注",inProgress:"正在运行",executionComplete:"执行已完成",operatingMetrics:"运行指标",executionState:"执行状态",researchQualification:"研究验证",executionNotQualification:"执行成功不代表研究结论已通过验证。",nextStep:"下一步",inspectOwnerEvidence:"查看负责方记录的证据和恢复指引",technicalDetails:"技术详情",runDetails:"运行详情与 Agent 用量",workflowId:"流程标识",
+
     session:"Codex 会话",turn:"轮次",observedTokens:"已观测 Token",cumulativeTokens:"累计 Token",unknownUsage:"用量未知的轮次",
     tokenLabel:"私有 API 令牌",connect:"连接",disconnect:"忘记令牌",
     tokenMemory:"令牌仅保存在当前页面内存中，不写入网址或浏览器存储。",

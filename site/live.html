@@ -21,6 +21,7 @@
         Owners retain authority. This view never approves research or authorizes
         promotion.
       </p>
+      <nav class="live-nav" aria-label="Workspace"><a href="#overview" data-i18n="overview">Overview</a><a href="#research-flows" data-i18n="workflows">Workflows</a><a href="#insights" data-i18n="insights">Evidence and history insights</a></nav>
       <label for="language" data-i18n="language">Language</label
       ><select id="language">
         <option value="en">English</option>
@@ -62,11 +63,31 @@
         <button id="disconnect" type="button" data-i18n="disconnect">Forget token</button>
         <p data-i18n="tokenMemory">The token stays in this page's memory and is never stored in a URL or browser storage.</p>
       </section>
+      <section id="overview" class="live-overview" aria-label="Loaded workflows"></section>
+      <details id="operating-metrics" class="live-panel live-disclosure">
+        <summary data-i18n="operatingMetrics">Operating metrics</summary>
       <section
         id="metrics"
         class="live-metrics"
         aria-label="Operational metrics"
       ></section>
+      </details>
+      <div class="live-columns">
+        <section id="research-flows" class="live-panel live-workflows">
+          <h2 data-i18n="workflows">Workflows</h2>
+          <label for="search" data-i18n="search">Search loaded workflows</label
+          ><input id="search" type="search" autocomplete="off" /><label
+            for="status"
+            data-i18n="filter"
+            >Status</label
+          ><select id="status">
+            <option value="" data-i18n="all">All statuses</option>
+          </select>
+          <div id="workflows"></div>
+          <button id="more" hidden data-i18n="more">Load more</button>
+        </section>
+        <section id="detail" class="live-detail" aria-live="polite"></section>
+      </div>
       <details class="live-panel live-insights" id="insights">
         <summary data-i18n="insights">Evidence and history insights</summary>
         <p data-i18n="insightsReadOnly">Read-only comparisons and recorded evidence. No execution or approval.</p>
@@ -93,22 +114,6 @@
           <button id="evaluation-load" data-i18n="evaluationLoad">Load evaluations</button>
           <div id="evaluation-result" aria-live="polite"></div></section>
       </details>
-      <div class="live-columns">
-        <section class="live-panel live-workflows">
-          <h2 data-i18n="workflows">Workflows</h2>
-          <label for="search" data-i18n="search">Search loaded workflows</label
-          ><input id="search" type="search" autocomplete="off" /><label
-            for="status"
-            data-i18n="filter"
-            >Status</label
-          ><select id="status">
-            <option value="" data-i18n="all">All statuses</option>
-          </select>
-          <div id="workflows"></div>
-          <button id="more" hidden data-i18n="more">Load more</button>
-        </section>
-        <section id="detail" class="live-detail" aria-live="polite"></section>
-      </div>
     </main>
   </body>
 </html>

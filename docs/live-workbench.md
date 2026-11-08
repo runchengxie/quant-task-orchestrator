@@ -1,5 +1,7 @@
 # Live research workbench
 
+[简体中文](live-workbench.zh-CN.md)
+
 The local GUI reads the same coordinator database as the TUI. It shows actual
 workflow dependencies, step identities, observations, evidence dimensions,
 recovery advice, pinned owner revisions and coordinator measurements.
@@ -22,6 +24,23 @@ the UI without a source checkout. The server binds to IPv4 loopback and rejects
 nonlocal Host/Origin headers. It provides no remote identity/authentication layer.
 Private remote access requires a separately designed deployment; do not change
 its bind address or expose the local database API as a public service.
+
+## Daily inspection
+
+Start with **Needs attention**, **In progress** or **Execution completed**. These
+clickable cards count only loaded workflows; the loaded/total label makes
+pagination coverage explicit. Click a selected card again to clear its filter.
+The operating metrics disclosure contains whole-database measurements.
+
+Select a workflow to see execution and research qualification separately, followed
+by recorded blocker codes and suggested next actions when available. Suggestions
+do not authorize execution. The dependency graph helps locate a step; evidence
+remains visible below it. Workflow hashes, permission facts, run/Agent usage and
+event history are available in disclosures. Expanded detail panels survive polling
+for the same workflow; selecting another workflow resets them.
+
+The public demo illustrates successful computation, missing evidence and failed
+execution. Its controls only change synthetic browser-local state.
 
 ## Evidence and recovery
 

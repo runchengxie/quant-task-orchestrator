@@ -334,3 +334,38 @@
 .live-insights details, .live-check details { overflow-wrap: anywhere; margin: 10px 0; }
 .live-insights .live-facts dd, .live-check .live-facts dd { overflow-wrap: anywhere; min-width: 0; }
 .live-check .live-facts { grid-template-columns: minmax(0, 1fr); font-size: 12px; }
+
+/* Keep the daily inspection path ahead of operating diagnostics. */
+.live-main { background: #f6f8f7; }
+.live-nav { display: grid; gap: 6px; margin: 6px 0 16px; }
+.live-nav a { color: #e0ece6; font-size: 13px; padding: 9px 8px; border-radius: 6px; }
+.live-nav a:hover, .live-nav a:focus-visible { background: #294c3f; }
+.live-overview { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 14px; margin: 22px 0; }
+.live-overview-scope { grid-column: 1/-1; margin: 0; font-size: 12px; color: #52665c; }
+.live-main .live-summary-card { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 84px; padding: 20px; border-radius: 12px; text-align: left; }
+.live-summary-card strong { font-size: 30px; font-weight: 600; }
+.live-summary-card span { font-size: 13px; }
+.live-main .live-summary-card[aria-pressed="true"] { background: #e7f0eb; border-color: #3c7358; }
+.live-disclosure { margin-bottom: 20px; }
+.live-disclosure > summary { cursor: pointer; font-size: 13px; font-weight: 600; padding: 2px 0; }
+.live-disclosure[open] > summary { margin-bottom: 18px; }
+.live-disclosure > .live-panel { padding: 0; border: 0; }
+.live-outcome { display: flex; flex-wrap: wrap; gap: 10px 24px; font-weight: 600; }
+.live-outcome p { margin: 0; }
+.live-next-action { margin-top: 18px; padding: 16px; background: #fff7e8; border-left: 3px solid #ad762c; border-radius: 4px; overflow-wrap: anywhere; }
+.live-next-action p { margin: 8px 0 0; font-size: 13px; }
+.live-main .live-workflow { padding: 14px; line-height: 1.6; }
+.live-workflow strong { display: block; font-size: 13px; overflow-wrap: anywhere; }
+.live-workflow .live-badge { margin-top: 6px; }
+.live-insights { margin-top: 24px; }
+.live-insights > summary { font-size: 15px; }
+#overview, #research-flows, #insights { scroll-margin-top: 20px; }
+@media (max-width: 700px) {
+  .live-overview { gap: 8px; }
+  .live-main .live-summary-card { padding: 12px; min-height: 96px; flex-direction: column; align-items: flex-start; }
+  .live-summary-card strong { font-size: 25px; }
+  .live-nav { grid-template-columns: repeat(3,minmax(0,1fr)); }
+  .live-nav a { padding: 6px; font-size: 12px; }
+}
+
+.live-workflows { align-self: start; }

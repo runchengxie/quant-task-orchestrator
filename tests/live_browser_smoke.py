@@ -122,6 +122,19 @@ def fixture_smoke():
             page.goto(f"http://127.0.0.1:{server.server_port}/")
             expect(page.locator(".live-workflow")).to_have_count(100)
             expect(page.locator("#health")).to_contain_text("Connected")
+            expect(page.locator("#overview")).to_contain_text("Loaded workflows")
+            expect(page.locator("#overview [data-group=attention] strong")).to_have_text("100")
+            page.locator("#overview [data-group=running]").click()
+            expect(page.locator(".live-workflow")).to_have_count(0)
+            page.locator("#overview [data-group=attention]").click()
+            expect(page.locator(".live-workflow")).to_have_count(100)
+            page.locator("#overview [data-group=attention]").click()
+            assert not page.locator("#operating-metrics").evaluate("e => e.open")
+            assert not page.locator("#workflow-technical").evaluate("e => e.open")
+            expect(page.locator(".live-outcome")).to_contain_text("Research qualification")
+            page.locator("#workflow-technical > summary").click()
+            page.locator("#refresh").click()
+            expect(page.locator("#workflow-technical")).to_have_attribute("open", "")
             assert page.locator("#detail img").count() == 0
             assert page.locator(".live-layer").count() == 2
             page.locator(".live-step").nth(1).click()
@@ -129,6 +142,14 @@ def fixture_smoke():
                 "Collect historical point-in-time evidence"
             )
             expect(page.locator(".live-check")).to_have_count(6)
+            # Approval blockers have WAITING steps; guidance must still be prominent.
+            workflow["steps"][1]["status"] = "waiting"
+            workflow["steps"][1]["recovery"] = {
+                "code": "approval_required", "actions": ["approve_exact_plan"],
+                "requires_operator": True,
+            }
+            page.locator("#refresh").click()
+            expect(page.locator(".live-next-action")).to_contain_text("approval_required")
             page.locator("#more").click()
             expect(page.locator(".live-workflow")).to_have_count(101)
             page.locator("#status").select_option("blocked")
